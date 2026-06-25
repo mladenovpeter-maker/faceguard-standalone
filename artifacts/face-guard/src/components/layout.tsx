@@ -1,11 +1,20 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Activity, Camera, Users, ShieldCheck, Map, Clock, Video, MonitorPlay, CalendarOff } from "lucide-react";
+import { Activity, Users, ShieldCheck, Map, Clock, Video, MonitorPlay, CalendarOff, LogOut, KeyRound, ChevronDown, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHealthCheck } from "@workspace/api-client-react";
+import { useAuth } from "@/lib/auth";
+import { ChangePasswordDialog } from "@/components/change-password-dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { data: health } = useHealthCheck();
+  const { user, logout } = useAuth();
+  const [changePwOpen, setChangePwOpen] = useState(false);
 
   const navItems = [
     { href: "/", label: "Табло", icon: Activity },
@@ -17,6 +26,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/cameras", label: "Камери", icon: Video },
     { href: "/zones", label: "Зони", icon: Map },
   ];
+
+  const roleLabel = user?.role === "admin" ? "АДМИНИСТРАТОР" : "ОПЕРАТОР";
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary selection:text-primary-foreground">
@@ -68,9 +79,40 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <h2 className="text-lg font-medium text-foreground capitalize tracking-wide">
             {navItems.find(i => location === i.href || (i.href !== "/" && location.startsWith(i.href)))?.label || "Преглед"}
           </h2>
-          <div className="flex items-center gap-4 text-sm font-mono text-muted-foreground">
-            <span>{new Date().toISOString().split('T')[0]}</span>
-            <span>СИС_АДМИНИСТРАТОР</span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-mono text-muted-foreground hidden md:block">
+              {new Date().toISOString().split("T")[0]}
+            </span>
+
+            {/* User menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 text-sm font-mono rounded-md px-2 py-1.5 hover:bg-secondary transition-colors text-foreground">
+                  <UserCircle className="h-4 w-4 text-primary" />
+                  <span className="font-medium">{user?.username?.toUpperCase()}</span>
+                  <span className="text-muted-foreground text-xs">({roleLabel})</span>
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <div className="px-2 py-1.5 text-xs text-muted-foreground font-mono">
+                  {user?.displayName ?? user?.username}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setChangePwOpen(true)} className="gap-2 cursor-pointer">
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Смяна на парола
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={logout}
+                  className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  Изход
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         <div className="flex-1 overflow-y-auto p-8">
@@ -79,6 +121,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </main>
+
+      <ChangePasswordDialog open={changePwOpen} onOpenChange={setChangePwOpen} />
     </div>
   );
 }

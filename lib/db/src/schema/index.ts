@@ -6,3 +6,4 @@ export * from "./recognition_events";
 export * from "./attendance";
 export * from "./leaves";
 export * from "./zone_work_schedules";
+export * from "./system_users";
