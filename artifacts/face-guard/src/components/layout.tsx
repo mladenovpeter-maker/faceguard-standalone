@@ -21,9 +21,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary selection:text-primary-foreground">
       {/* Sidebar */}
       <aside className="w-64 border-r border-border bg-card flex flex-col z-20">
-        <div className="h-16 flex items-center px-6 border-b border-border">
-          <ShieldCheck className="h-6 w-6 text-primary mr-3" />
-          <h1 className="font-bold text-lg tracking-tight">FaceGuard OS</h1>
+        <div className="h-16 flex items-center px-6 border-b border-border gap-3">
+          <ShieldCheck className="h-6 w-6 text-primary shrink-0" />
+          <div className="min-w-0">
+            <h1 className="font-bold text-base tracking-tight leading-tight">FaceGuard</h1>
+            <p className="text-[10px] font-mono text-muted-foreground leading-tight tracking-wide uppercase">Контрол на достъп · Работно Време</p>
+          </div>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           <div className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2 px-3">
