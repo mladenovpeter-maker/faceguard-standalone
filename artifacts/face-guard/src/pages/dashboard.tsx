@@ -130,11 +130,11 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── MAIN ROW: Presence Wall + Live Feed ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      {/* ── PRESENCE WALL (full width) ── */}
+      <div className="grid grid-cols-1 gap-5">
 
         {/* PRESENCE WALL */}
-        <Card className="lg:col-span-2 border-border bg-card">
+        <Card className="border-border bg-card">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium uppercase tracking-wider font-mono text-muted-foreground">
               Кой е в сградата
@@ -203,53 +203,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* LIVE FEED */}
-        <Card className="border-border bg-card flex flex-col">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium uppercase tracking-wider font-mono text-muted-foreground">На живо</CardTitle>
-            <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-          </CardHeader>
-          <CardContent className="flex-1 overflow-auto p-0">
-            {loadingEvents ? (
-              <div className="p-4 space-y-3">
-                {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded" />)}
-              </div>
-            ) : events && events.length > 0 ? (
-              <div className="divide-y divide-border">
-                {events.map((event) => (
-                  <div key={event.id} className="px-4 py-3 flex items-start gap-3 hover:bg-muted/40 transition-colors">
-                    <div className={`h-8 w-8 shrink-0 rounded-full overflow-hidden border-2 flex items-center justify-center text-[10px] font-bold ${
-                      event.status === "recognized" ? "border-green-500/40 bg-green-500/10 text-green-600" :
-                      event.status === "denied" ? "border-red-500/40 bg-red-500/10 text-red-500" :
-                      "border-amber-500/40 bg-amber-500/10 text-amber-600"
-                    }`}>
-                      {event.snapshotUrl ? (
-                        <img src={event.snapshotUrl} alt="" className="h-full w-full object-cover" />
-                      ) : event.status === "recognized" && event.employeeName ? (
-                        `${event.employeeName[0]}${event.employeeName.split(" ")[1]?.[0] ?? ""}`
-                      ) : (
-                        <UserX className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start gap-1">
-                        <p className="text-xs font-medium truncate leading-tight">
-                          {event.status === "recognized" ? event.employeeName : "Непознато лице"}
-                        </p>
-                        <EventDot status={event.status} />
-                      </div>
-                      <p className="text-[10px] text-muted-foreground font-mono truncate mt-0.5">
-                        {event.cameraName} · {new Date(event.detectedAt).toLocaleTimeString("bg-BG")}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground text-sm">Няма скорошни събития</div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* ── BOTTOM ROW: Arrival Chart + Department Breakdown ── */}
