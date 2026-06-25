@@ -1,11 +1,12 @@
-import { useListZones, useCreateZone, getListZonesQueryKey } from "@workspace/api-client-react";
+import { useListZones, useCreateZone, useUpdateZone, useDeleteZone, getListZonesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Map, Plus, Shield, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Map, Plus, Shield, ShieldAlert, ShieldCheck, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,33 +22,88 @@ const zoneSchema = z.object({
   accessLevel: z.enum(["public", "restricted", "secure"]),
 });
 
+type ZoneFormValues = z.infer<typeof zoneSchema>;
+
+function ZoneForm({ defaultValues, onSubmit, isPending, submitLabel }: {
+  defaultValues: ZoneFormValues;
+  onSubmit: (v: ZoneFormValues) => void;
+  isPending: boolean;
+  submitLabel: string;
+}) {
+  const form = useForm<ZoneFormValues>({
+    resolver: zodResolver(zoneSchema),
+    defaultValues,
+  });
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+        <FormField control={form.control} name="name" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Наименование на зоната</FormLabel>
+            <FormControl><Input placeholder="напр. Сървърна зала" {...field} /></FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+        <FormField control={form.control} name="description" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Описание (незадължително)</FormLabel>
+            <FormControl><Input placeholder="Кратко описание на помещението" {...field} /></FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+        <FormField control={form.control} name="accessLevel" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Ниво на достъп</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value}>
+              <FormControl><SelectTrigger><SelectValue placeholder="Избери ниво" /></SelectTrigger></FormControl>
+              <SelectContent>
+                <SelectItem value="public">Публичен</SelectItem>
+                <SelectItem value="restricted">Ограничен</SelectItem>
+                <SelectItem value="secure">Сигурен</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )} />
+        <Button type="submit" className="w-full" disabled={isPending}>
+          {isPending ? "Запазване..." : submitLabel}
+        </Button>
+      </form>
+    </Form>
+  );
+}
+
 export default function ZoneList() {
   const { data: zones, isLoading } = useListZones();
   const createZone = useCreateZone();
+  const updateZone = useUpdateZone();
+  const deleteZone = useDeleteZone();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editZone, setEditZone] = useState<{ id: number; name: string; description?: string | null; accessLevel: string } | null>(null);
 
-  const form = useForm<z.infer<typeof zoneSchema>>({
-    resolver: zodResolver(zoneSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      accessLevel: "restricted",
-    },
-  });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListZonesQueryKey() });
 
-  function onSubmit(values: z.infer<typeof zoneSchema>) {
+  function handleCreate(values: ZoneFormValues) {
     createZone.mutate({ data: values }, {
-      onSuccess: () => {
-        toast({ title: "Зоната е създадена успешно" });
-        queryClient.invalidateQueries({ queryKey: getListZonesQueryKey() });
-        setOpen(false);
-        form.reset();
-      },
-      onError: (err: any) => {
-        toast({ title: "Грешка при създаване на зона", description: err.message, variant: "destructive" });
-      }
+      onSuccess: () => { toast({ title: "Зоната е създадена успешно" }); invalidate(); setCreateOpen(false); },
+      onError: (err: any) => toast({ title: "Грешка", description: err.message, variant: "destructive" }),
+    });
+  }
+
+  function handleEdit(values: ZoneFormValues) {
+    if (!editZone) return;
+    updateZone.mutate({ id: editZone.id, data: values }, {
+      onSuccess: () => { toast({ title: "Зоната е актуализирана" }); invalidate(); setEditZone(null); },
+      onError: (err: any) => toast({ title: "Грешка", description: err.message, variant: "destructive" }),
+    });
+  }
+
+  function handleDelete(id: number) {
+    deleteZone.mutate({ id }, {
+      onSuccess: () => { toast({ title: "Зоната е изтрита" }); invalidate(); },
+      onError: (err: any) => toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" }),
     });
   }
 
@@ -55,74 +111,42 @@ export default function ZoneList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Зони</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button className="font-mono text-xs uppercase tracking-wider">
               <Plus className="mr-2 h-4 w-4" /> Добави зона
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Създаване на нова зона</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Наименование на зоната</FormLabel>
-                      <FormControl>
-                        <Input placeholder="напр. Сървърна зала" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Описание (незадължително)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Кратко описание на помещението" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="accessLevel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ниво на достъп</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Избери ниво" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="public">Публичен</SelectItem>
-                          <SelectItem value="restricted">Ограничен</SelectItem>
-                          <SelectItem value="secure">Сигурен</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={createZone.isPending}>
-                  {createZone.isPending ? "Създаване..." : "Създай зона"}
-                </Button>
-              </form>
-            </Form>
+            <DialogHeader><DialogTitle>Създаване на нова зона</DialogTitle></DialogHeader>
+            <ZoneForm
+              defaultValues={{ name: "", description: "", accessLevel: "restricted" }}
+              onSubmit={handleCreate}
+              isPending={createZone.isPending}
+              submitLabel="Създай зона"
+            />
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editZone} onOpenChange={(o) => !o && setEditZone(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Редактиране на зона</DialogTitle></DialogHeader>
+          {editZone && (
+            <ZoneForm
+              defaultValues={{
+                name: editZone.name,
+                description: editZone.description ?? "",
+                accessLevel: editZone.accessLevel as "public" | "restricted" | "secure",
+              }}
+              onSubmit={handleEdit}
+              isPending={updateZone.isPending}
+              submitLabel="Запази промените"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         <Table>
@@ -131,33 +155,62 @@ export default function ZoneList() {
               <TableHead>Наименование</TableHead>
               <TableHead>Описание</TableHead>
               <TableHead>Ниво на достъп</TableHead>
-              <TableHead className="text-right">Камери</TableHead>
+              <TableHead className="text-center">Камери</TableHead>
+              <TableHead className="text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={4}><Skeleton className="h-10 w-full" /></TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
             ) : zones && zones.length > 0 ? (
               zones.map((zone) => (
                 <TableRow key={zone.id}>
-                  <TableCell className="font-medium flex items-center gap-2">
-                    <Map className="h-4 w-4 text-muted-foreground" />
-                    {zone.name}
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <Map className="h-4 w-4 text-muted-foreground shrink-0" />
+                      {zone.name}
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{zone.description || "-"}</TableCell>
-                  <TableCell>
-                    <AccessLevelBadge level={zone.accessLevel} />
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-muted-foreground">
-                    {zone.cameraCount || 0}
+                  <TableCell><AccessLevelBadge level={zone.accessLevel} /></TableCell>
+                  <TableCell className="text-center font-mono text-muted-foreground">{zone.cameraCount || 0}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost" size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => setEditZone({ id: zone.id, name: zone.name, description: zone.description, accessLevel: zone.accessLevel })}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Изтриване на зона</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Сигурни ли сте, че искате да изтриете зона <strong>„{zone.name}"</strong>? Това действие е необратимо.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Отказ</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(zone.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Изтрий
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">Няма конфигурирани зони.</TableCell>
+                <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Няма конфигурирани зони.</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -168,7 +221,7 @@ export default function ZoneList() {
 }
 
 function AccessLevelBadge({ level }: { level: string }) {
-  if (level === 'public') return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20"><ShieldCheck className="h-3 w-3 mr-1"/> ПУБЛИЧЕН</Badge>;
-  if (level === 'secure') return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20"><ShieldAlert className="h-3 w-3 mr-1"/> СИГУРЕН</Badge>;
-  return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20"><Shield className="h-3 w-3 mr-1"/> ОГРАНИЧЕН</Badge>;
+  if (level === 'public') return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20"><ShieldCheck className="h-3 w-3 mr-1" />ПУБЛИЧЕН</Badge>;
+  if (level === 'secure') return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20"><ShieldAlert className="h-3 w-3 mr-1" />СИГУРЕН</Badge>;
+  return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20"><Shield className="h-3 w-3 mr-1" />ОГРАНИЧЕН</Badge>;
 }

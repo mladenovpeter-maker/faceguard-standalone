@@ -1,34 +1,159 @@
-import { useGetEmployee, useListRecognitions } from "@workspace/api-client-react";
+import { useGetEmployee, useUpdateEmployee, useDeleteEmployee, useListRecognitions, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useParams, useLocation } from "wouter";
-import { ArrowLeft, User, Phone, Mail, Building, Briefcase, Calendar } from "lucide-react";
+import { ArrowLeft, User, Phone, Mail, Building, Briefcase, Calendar, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+
+const editSchema = z.object({
+  firstName: z.string().min(1, "Задължително"),
+  lastName: z.string().min(1, "Задължително"),
+  employeeNumber: z.string().min(1, "Задължително"),
+  department: z.string().min(1, "Задължително"),
+  position: z.string().min(1, "Задължително"),
+  email: z.string().email("Невалиден имейл").optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
+});
 
 export default function EmployeeDetail() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const employeeId = parseInt(id || "0", 10);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
 
-  const { data: employee, isLoading: loadingEmp } = useGetEmployee(employeeId, { query: { enabled: !!employeeId } });
+  const { data: employee, isLoading: loadingEmp, refetch } = useGetEmployee(employeeId, { query: { enabled: !!employeeId } });
   const { data: recognitions, isLoading: loadingRec } = useListRecognitions({ employeeId, limit: 10 }, { query: { enabled: !!employeeId } });
+  const updateEmployee = useUpdateEmployee();
+  const deleteEmployee = useDeleteEmployee();
+
+  const form = useForm<z.infer<typeof editSchema>>({
+    resolver: zodResolver(editSchema),
+    values: employee ? {
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      employeeNumber: employee.employeeNumber,
+      department: employee.department ?? "",
+      position: employee.position ?? "",
+      email: employee.email ?? "",
+      phone: employee.phone ?? "",
+    } : undefined,
+  });
+
+  function handleEdit(values: z.infer<typeof editSchema>) {
+    updateEmployee.mutate({ id: employeeId, data: values }, {
+      onSuccess: () => {
+        toast({ title: "Данните са актуализирани" });
+        refetch();
+        queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+        setEditOpen(false);
+      },
+      onError: (err: any) => toast({ title: "Грешка", description: err.message, variant: "destructive" }),
+    });
+  }
+
+  function handleDelete() {
+    deleteEmployee.mutate({ id: employeeId }, {
+      onSuccess: () => {
+        toast({ title: "Служителят е изтрит" });
+        queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+        setLocation("/employees");
+      },
+      onError: (err: any) => toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" }),
+    });
+  }
 
   if (loadingEmp) return <div className="p-8"><Skeleton className="h-64 w-full" /></div>;
   if (!employee) return <div className="p-8 text-center">Служителят не е намерен</div>;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 flex-wrap">
         <Button variant="ghost" size="icon" onClick={() => setLocation("/employees")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Профил на служител</h1>
-        <Badge variant="outline" className={employee.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20 ml-auto' : 'bg-muted text-muted-foreground ml-auto'}>
+        <Badge variant="outline" className={employee.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-muted text-muted-foreground'}>
           {employee.status === 'active' ? 'АКТИВЕН' : 'НЕАКТИВЕН'}
         </Badge>
+        <div className="ml-auto flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil className="h-4 w-4 mr-2" /> Редактирай
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" /> Изтрий
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Изтриване на служител</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Сигурни ли сте, че искате да изтриете <strong>{employee.firstName} {employee.lastName}</strong>? Всички свързани данни (разпознавания, присъствие, права за достъп) ще бъдат изтрити. Това действие е необратимо.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Отказ</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Изтрий
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>Редактиране на служител</DialogTitle></DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleEdit)} className="grid grid-cols-2 gap-4 mt-2">
+              <FormField control={form.control} name="firstName" render={({ field }) => (
+                <FormItem><FormLabel>Име</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="lastName" render={({ field }) => (
+                <FormItem><FormLabel>Фамилия</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="employeeNumber" render={({ field }) => (
+                <FormItem><FormLabel>Служебен номер</FormLabel><FormControl><Input className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="department" render={({ field }) => (
+                <FormItem><FormLabel>Отдел</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="position" render={({ field }) => (
+                <FormItem><FormLabel>Длъжност</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem><FormLabel>Имейл</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="phone" render={({ field }) => (
+                <FormItem><FormLabel>Телефон</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <div className="col-span-2 flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Отказ</Button>
+                <Button type="submit" disabled={updateEmployee.isPending}>
+                  {updateEmployee.isPending ? "Запазване..." : "Запази промените"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="col-span-1 border-border bg-card">
@@ -44,28 +169,28 @@ export default function EmployeeDetail() {
             <p className="font-mono text-sm text-muted-foreground mt-1 mb-4">{employee.employeeNumber}</p>
 
             <div className="w-full space-y-3 text-sm text-left">
-              <div className="flex items-center text-muted-foreground">
-                <Building className="h-4 w-4 mr-3" />
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Building className="h-4 w-4 shrink-0" />
                 <span className="text-foreground">{employee.department}</span>
               </div>
-              <div className="flex items-center text-muted-foreground">
-                <Briefcase className="h-4 w-4 mr-3" />
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Briefcase className="h-4 w-4 shrink-0" />
                 <span className="text-foreground">{employee.position}</span>
               </div>
               {employee.email && (
-                <div className="flex items-center text-muted-foreground">
-                  <Mail className="h-4 w-4 mr-3" />
-                  <span className="text-foreground">{employee.email}</span>
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <Mail className="h-4 w-4 shrink-0" />
+                  <span className="text-foreground break-all">{employee.email}</span>
                 </div>
               )}
               {employee.phone && (
-                <div className="flex items-center text-muted-foreground">
-                  <Phone className="h-4 w-4 mr-3" />
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <Phone className="h-4 w-4 shrink-0" />
                   <span className="text-foreground">{employee.phone}</span>
                 </div>
               )}
-              <div className="flex items-center text-muted-foreground">
-                <Calendar className="h-4 w-4 mr-3" />
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Calendar className="h-4 w-4 shrink-0" />
                 <span className="text-foreground">Постъпил на {new Date(employee.createdAt).toLocaleDateString('bg-BG')}</span>
               </div>
             </div>

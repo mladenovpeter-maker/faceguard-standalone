@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
@@ -33,27 +34,19 @@ export default function AccessRulesList() {
     resolver: zodResolver(ruleSchema),
   });
 
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListAccessRulesQueryKey() });
+
   function onSubmit(values: z.infer<typeof ruleSchema>) {
     createRule.mutate({ data: values }, {
-      onSuccess: () => {
-        toast({ title: "Правото за достъп е добавено" });
-        queryClient.invalidateQueries({ queryKey: getListAccessRulesQueryKey() });
-        setOpen(false);
-        form.reset();
-      },
-      onError: (err: any) => {
-        toast({ title: "Грешка", description: err.message, variant: "destructive" });
-      }
+      onSuccess: () => { toast({ title: "Правото за достъп е добавено" }); invalidate(); setOpen(false); form.reset(); },
+      onError: (err: any) => toast({ title: "Грешка", description: err.message, variant: "destructive" }),
     });
   }
 
   function handleDelete(id: number) {
-    if (!confirm("Премахване на това право за достъп?")) return;
     deleteRule.mutate({ id }, {
-      onSuccess: () => {
-        toast({ title: "Правото е премахнато" });
-        queryClient.invalidateQueries({ queryKey: getListAccessRulesQueryKey() });
-      }
+      onSuccess: () => { toast({ title: "Правото е премахнато" }); invalidate(); },
+      onError: (err: any) => toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" }),
     });
   }
 
@@ -68,59 +61,39 @@ export default function AccessRulesList() {
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Даване на достъп до зона</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Даване на достъп до зона</DialogTitle></DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-                <FormField
-                  control={form.control}
-                  name="employeeId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Служител</FormLabel>
-                      <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value?.toString()}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Избери служител" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {employees?.map(emp => (
-                            <SelectItem key={emp.id} value={emp.id.toString()}>
-                              {emp.firstName} {emp.lastName} ({emp.employeeNumber})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="zoneId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Зона</FormLabel>
-                      <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value?.toString()}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Избери зона" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {zones?.map(zone => (
-                            <SelectItem key={zone.id} value={zone.id.toString()}>
-                              {zone.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormField control={form.control} name="employeeId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Служител</FormLabel>
+                    <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value?.toString()}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Избери служител" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {employees?.map(emp => (
+                          <SelectItem key={emp.id} value={emp.id.toString()}>
+                            {emp.firstName} {emp.lastName} ({emp.employeeNumber})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="zoneId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Зона</FormLabel>
+                    <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value?.toString()}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Избери зона" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {zones?.map(zone => (
+                          <SelectItem key={zone.id} value={zone.id.toString()}>{zone.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <Button type="submit" className="w-full" disabled={createRule.isPending}>
                   {createRule.isPending ? "Запазване..." : "Дай достъп"}
                 </Button>
@@ -143,9 +116,7 @@ export default function AccessRulesList() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
             ) : rules && rules.length > 0 ? (
               rules.map((rule) => (
                 <TableRow key={rule.id}>
@@ -156,9 +127,27 @@ export default function AccessRulesList() {
                     {new Date(rule.createdAt).toLocaleDateString('bg-BG')}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(rule.id)} className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Премахване на право за достъп</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Сигурни ли сте, че искате да премахнете достъпа на <strong>{rule.employeeName}</strong> до зона <strong>„{rule.zoneName}"</strong>?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Отказ</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(rule.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Премахни
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))
