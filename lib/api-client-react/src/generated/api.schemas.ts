@@ -5,8 +5,26 @@
  * FaceGuard - Face Recognition Access & Attendance System
  * OpenAPI spec version: 0.1.0
  */
+export type HealthStatusStatus = typeof HealthStatusStatus[keyof typeof HealthStatusStatus];
+
+
+export const HealthStatusStatus = {
+  ok: 'ok',
+  degraded: 'degraded',
+} as const;
+
+export type HealthStatusDb = typeof HealthStatusDb[keyof typeof HealthStatusDb];
+
+
+export const HealthStatusDb = {
+  ok: 'ok',
+  error: 'error',
+} as const;
+
 export interface HealthStatus {
-  status: string;
+  status: HealthStatusStatus;
+  db: HealthStatusDb;
+  uptimeSeconds: number;
 }
 
 export type EmployeeStatus = typeof EmployeeStatus[keyof typeof EmployeeStatus];

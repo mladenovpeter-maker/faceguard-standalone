@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Activity, Users, ShieldCheck, Map, Clock, Video, MonitorPlay, CalendarOff, LogOut, KeyRound, ChevronDown, UserCircle } from "lucide-react";
+import { Activity, Users, ShieldCheck, Map, Clock, Video, MonitorPlay, CalendarOff, LogOut, KeyRound, ChevronDown, UserCircle, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHealthCheck } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
@@ -10,9 +10,17 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+function formatUptime(seconds: number): string {
+  if (seconds < 60) return `${Math.floor(seconds)}с`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}мин`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return `${h}ч ${m}мин`;
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-  const { data: health } = useHealthCheck();
+  const { data: health } = useHealthCheck({ query: { refetchInterval: 30000 } });
   const { user, logout } = useAuth();
   const [changePwOpen, setChangePwOpen] = useState(false);
 
@@ -62,14 +70,41 @@ export function Layout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="p-4 border-t border-border bg-card/50">
+        <div className="p-4 border-t border-border bg-card/50 space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground font-mono">СТАТУС НА СИСТЕМАТА</span>
             <div className="flex items-center gap-1.5">
-              <span className={cn("h-2 w-2 rounded-full", health?.status === "ok" ? "bg-green-500" : "bg-red-500")} />
-              <span className="font-mono font-medium">{health?.status === "ok" ? "ОНЛАЙН" : "ОФЛАЙН"}</span>
+              <span className={cn(
+                "h-2 w-2 rounded-full",
+                !health ? "bg-gray-400 animate-pulse" :
+                health.status === "ok" ? "bg-green-500 animate-pulse" : "bg-red-500"
+              )} />
+              <span className={cn(
+                "font-mono font-semibold text-xs",
+                !health ? "text-muted-foreground" :
+                health.status === "ok" ? "text-green-500" : "text-red-500"
+              )}>
+                {!health ? "ЗАРЕЖДАНЕ" : health.status === "ok" ? "ОНЛАЙН" : "ПРОБЛЕМ"}
+              </span>
             </div>
           </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
+            <div className="flex items-center gap-1">
+              <Database className="h-3 w-3" />
+              <span>БД</span>
+            </div>
+            <span className={cn(
+              "font-medium",
+              health?.db === "ok" ? "text-green-500" : "text-red-400"
+            )}>
+              {!health ? "—" : health.db === "ok" ? "ОК" : "ГРЕШКА"}
+            </span>
+          </div>
+          {health?.uptimeSeconds !== undefined && (
+            <div className="text-xs text-muted-foreground font-mono text-right">
+              uptime {formatUptime(health.uptimeSeconds)}
+            </div>
+          )}
         </div>
       </aside>
 

@@ -5,7 +5,11 @@
  * FaceGuard - Face Recognition Access & Attendance System
  * OpenAPI spec version: 0.1.0
  */
+import type { HealthStatusDb } from './healthStatusDb';
+import type { HealthStatusStatus } from './healthStatusStatus';
 
 export interface HealthStatus {
-  status: string;
+  status: HealthStatusStatus;
+  db: HealthStatusDb;
+  uptimeSeconds: number;
 }

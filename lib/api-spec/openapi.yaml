@@ -731,11 +731,16 @@ components:
   schemas:
     HealthStatus:
       type: object
+      required: [status, db, uptimeSeconds]
       properties:
         status:
           type: string
-      required:
-        - status
+          enum: [ok, degraded]
+        db:
+          type: string
+          enum: [ok, error]
+        uptimeSeconds:
+          type: number
 
     Employee:
       type: object

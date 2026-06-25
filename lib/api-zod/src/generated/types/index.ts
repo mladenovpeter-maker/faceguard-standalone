@@ -30,6 +30,8 @@ export * from './employeeStatus';
 export * from './employeeUpdate';
 export * from './employeeUpdateStatus';
 export * from './healthStatus';
+export * from './healthStatusDb';
+export * from './healthStatusStatus';
 export * from './hourlyActivity';
 export * from './leaveInput';
 export * from './leaveInputStatus';
