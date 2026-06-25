@@ -4,64 +4,33 @@ import type { AttendanceReportRow } from "@workspace/api-client-react";
 import {
   User, Search, Calendar, ChevronDown, Clock,
   CheckCircle, XCircle, Plane, TrendingUp, Timer,
-  ArrowRight, Building2, Stethoscope, FileX, AlertCircle,
+  Building2, Stethoscope, FileX, AlertCircle, CalendarRange,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarUI } from "@/components/ui/calendar";
+import type { DateRange } from "react-day-picker";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-
-/* ── types ──────────────────────────────────────────────────── */
-
-type Preset = "today" | "yesterday" | "this_week" | "last_week" | "this_month" | "last_month" | "custom";
 
 /* ── date helpers ─────────────────────────────────────────────── */
 
 const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
-function resolveRange(preset: Preset, cFrom: string, cTo: string) {
-  const now = new Date();
-  switch (preset) {
-    case "today":      return { from: fmt(now), to: fmt(now) };
-    case "yesterday": {
-      const y = new Date(now); y.setDate(now.getDate() - 1);
-      return { from: fmt(y), to: fmt(y) };
-    }
-    case "this_week": {
-      const day = now.getDay() || 7;
-      const mon = new Date(now); mon.setDate(now.getDate() - day + 1);
-      return { from: fmt(mon), to: fmt(now) };
-    }
-    case "last_week": {
-      const day = now.getDay() || 7;
-      const lm = new Date(now); lm.setDate(now.getDate() - day - 6);
-      const ls = new Date(lm); ls.setDate(lm.getDate() + 6);
-      return { from: fmt(lm), to: fmt(ls) };
-    }
-    case "this_month": {
-      return { from: fmt(new Date(now.getFullYear(), now.getMonth(), 1)), to: fmt(now) };
-    }
-    case "last_month": {
-      const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const last  = new Date(now.getFullYear(), now.getMonth(), 0);
-      return { from: fmt(first), to: fmt(last) };
-    }
-    case "custom":
-      return { from: cFrom || fmt(now), to: cTo || fmt(now) };
-  }
-}
-
-const PRESETS: { key: Preset; label: string }[] = [
-  { key: "today",      label: "ДНЕС"       },
-  { key: "yesterday",  label: "ВЧЕРА"      },
-  { key: "this_week",  label: "ТАЗИ СЕДМ." },
-  { key: "last_week",  label: "МИН. СЕДМ." },
-  { key: "this_month", label: "ТОЗИ МЕС."  },
-  { key: "last_month", label: "МИН. МЕС."  },
-  { key: "custom",     label: "ИЗБОР…"     },
+const SHORTCUTS: { label: string; range: () => { from: Date; to: Date } }[] = [
+  { label: "Днес",          range: () => { const d = new Date(); return { from: d, to: d }; } },
+  { label: "Вчера",         range: () => { const d = new Date(); d.setDate(d.getDate()-1); return { from: d, to: d }; } },
+  { label: "Тази седмица",  range: () => { const n = new Date(); const day = n.getDay()||7; const m = new Date(n); m.setDate(n.getDate()-day+1); return { from: m, to: n }; } },
+  { label: "Мин. седмица",  range: () => { const n = new Date(); const day = n.getDay()||7; const m = new Date(n); m.setDate(n.getDate()-day-6); const e = new Date(m); e.setDate(m.getDate()+6); return { from: m, to: e }; } },
+  { label: "Този месец",    range: () => { const n = new Date(); return { from: new Date(n.getFullYear(), n.getMonth(), 1), to: n }; } },
+  { label: "Мин. месец",    range: () => { const n = new Date(); return { from: new Date(n.getFullYear(), n.getMonth()-1, 1), to: new Date(n.getFullYear(), n.getMonth(), 0) }; } },
+  { label: "Последните 30", range: () => { const n = new Date(); const m = new Date(n); m.setDate(n.getDate()-29); return { from: m, to: n }; } },
+  { label: "Тримесечие",    range: () => { const n = new Date(); const m = new Date(n); m.setDate(n.getDate()-89); return { from: m, to: n }; } },
 ];
 
 const LEAVE_META: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
@@ -371,14 +340,15 @@ function MultiDayTable({ rows, workingDays }: { rows: AttendanceReportRow[]; wor
 /* ── Main page ──────────────────────────────────────────────── */
 
 export default function AttendancePage() {
-  const [preset, setPreset]   = useState<Preset>("today");
-  const [cFrom, setCFrom]     = useState("");
-  const [cTo, setCTo]         = useState("");
-  const [search, setSearch]   = useState("");
-  const [dept, setDept]       = useState("all");
+  const today = new Date();
+  const [range, setRange]   = useState<DateRange>({ from: today, to: today });
+  const [calOpen, setCalOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [dept, setDept]     = useState("all");
 
-  const { from, to } = resolveRange(preset, cFrom, cTo);
-  const isSingleDay  = from === to;
+  const from = range.from ? fmt(range.from) : fmt(today);
+  const to   = range.to   ? fmt(range.to)   : from;
+  const isSingleDay = from === to;
 
   const { data: report, isLoading } = useGetAttendanceReport({ from, to });
 
@@ -419,41 +389,66 @@ export default function AttendancePage() {
         <p className="text-sm text-muted-foreground font-mono mt-0.5">{rangeLabel}</p>
       </div>
 
-      {/* Preset chips */}
-      <div className="flex flex-wrap gap-2 items-center">
-        {PRESETS.map(p => (
-          <button
-            key={p.key}
-            onClick={() => setPreset(p.key)}
-            className={cn(
-              "px-3.5 py-1.5 rounded-full text-xs font-mono font-semibold tracking-wider border transition-all",
-              preset === p.key
-                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
-            )}
+      {/* Date range picker */}
+      <Popover open={calOpen} onOpenChange={setCalOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="h-9 px-4 gap-2 text-sm font-normal border-border bg-muted/40 hover:bg-muted/70 text-foreground"
           >
-            {p.label}
-          </button>
-        ))}
-
-        {preset === "custom" && (
-          <div className="flex items-center gap-2 ml-1 flex-wrap">
-            <input
-              type="date"
-              value={cFrom}
-              onChange={e => setCFrom(e.target.value)}
-              className="h-8 rounded-lg border border-border bg-muted/50 px-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
-            />
-            <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-            <input
-              type="date"
-              value={cTo}
-              onChange={e => setCTo(e.target.value)}
-              className="h-8 rounded-lg border border-border bg-muted/50 px-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+            <CalendarRange className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="font-mono">{rangeLabel}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 flex" align="start" sideOffset={8}>
+          {/* Shortcuts sidebar */}
+          <div className="flex flex-col gap-0.5 p-3 border-r border-border min-w-[150px]">
+            <p className="text-[10px] font-mono font-semibold uppercase tracking-widest text-muted-foreground px-2 pb-1">Бързо</p>
+            {SHORTCUTS.map(s => {
+              const r = s.range();
+              const sf = fmt(r.from);
+              const st = fmt(r.to);
+              const active = from === sf && to === st;
+              return (
+                <button
+                  key={s.label}
+                  onClick={() => { setRange({ from: r.from, to: r.to }); setCalOpen(false); }}
+                  className={cn(
+                    "text-left text-sm px-2 py-1.5 rounded-md transition-colors",
+                    active
+                      ? "bg-primary text-primary-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
+          </div>
+          {/* Calendar */}
+          <div className="p-3">
+            <CalendarUI
+              mode="range"
+              selected={range}
+              onSelect={(r) => {
+                if (r) {
+                  setRange(r);
+                  if (r.from && r.to) setCalOpen(false);
+                }
+              }}
+              numberOfMonths={2}
+              disabled={{ after: new Date() }}
+              formatters={{
+                formatCaption: (date) =>
+                  date.toLocaleDateString("bg-BG", { month: "long", year: "numeric" }),
+                formatWeekdayName: (date) =>
+                  date.toLocaleDateString("bg-BG", { weekday: "short" }).slice(0, 2),
+              }}
+              classNames={{ months: "flex gap-4" }}
             />
           </div>
-        )}
-      </div>
+        </PopoverContent>
+      </Popover>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
