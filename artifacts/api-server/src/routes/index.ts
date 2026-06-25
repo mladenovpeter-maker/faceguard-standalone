@@ -7,6 +7,8 @@ import accessRulesRouter from "./access_rules";
 import recognitionsRouter from "./recognitions";
 import attendanceRouter from "./attendance";
 import dashboardRouter from "./dashboard";
+import leavesRouter from "./leaves";
+import zoneSchedulesRouter from "./zone_schedules";
 
 const router: IRouter = Router();
 
@@ -18,5 +20,7 @@ router.use(accessRulesRouter);
 router.use(recognitionsRouter);
 router.use(attendanceRouter);
 router.use(dashboardRouter);
+router.use(leavesRouter);
+router.use(zoneSchedulesRouter);
 
 export default router;

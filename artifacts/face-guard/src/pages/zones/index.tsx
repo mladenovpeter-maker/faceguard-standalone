@@ -1,11 +1,15 @@
-import { useListZones, useCreateZone, useUpdateZone, useDeleteZone, getListZonesQueryKey } from "@workspace/api-client-react";
+import {
+  useListZones, useCreateZone, useUpdateZone, useDeleteZone, getListZonesQueryKey,
+  useListZoneSchedules, useUpsertZoneSchedule, useDeleteZoneSchedule, getListZoneSchedulesQueryKey,
+} from "@workspace/api-client-react";
+import type { ZoneWorkSchedule } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Map, Plus, Shield, ShieldAlert, ShieldCheck, Pencil, Trash2 } from "lucide-react";
+import { Map, Plus, Shield, ShieldAlert, ShieldCheck, Pencil, Trash2, Clock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -16,12 +20,12 @@ import { z } from "zod";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
+/* ─── Zone form ─── */
 const zoneSchema = z.object({
   name: z.string().min(1, "Наименованието е задължително"),
   description: z.string().optional(),
   accessLevel: z.enum(["public", "restricted", "secure"]),
 });
-
 type ZoneFormValues = z.infer<typeof zoneSchema>;
 
 function ZoneForm({ defaultValues, onSubmit, isPending, submitLabel }: {
@@ -30,10 +34,7 @@ function ZoneForm({ defaultValues, onSubmit, isPending, submitLabel }: {
   isPending: boolean;
   submitLabel: string;
 }) {
-  const form = useForm<ZoneFormValues>({
-    resolver: zodResolver(zoneSchema),
-    defaultValues,
-  });
+  const form = useForm<ZoneFormValues>({ resolver: zodResolver(zoneSchema), defaultValues });
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
@@ -73,6 +74,149 @@ function ZoneForm({ defaultValues, onSubmit, isPending, submitLabel }: {
   );
 }
 
+/* ─── Work schedule dialog ─── */
+const DAYS = [
+  { iso: 1, label: "Понеделник" },
+  { iso: 2, label: "Вторник" },
+  { iso: 3, label: "Сряда" },
+  { iso: 4, label: "Четвъртък" },
+  { iso: 5, label: "Петък" },
+  { iso: 6, label: "Събота" },
+  { iso: 7, label: "Неделя" },
+];
+
+const slotSchema = z.object({
+  dayOfWeek: z.coerce.number().min(1).max(7),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Формат ЧЧ:ММ"),
+  endTime:   z.string().regex(/^\d{2}:\d{2}$/, "Формат ЧЧ:ММ"),
+});
+type SlotForm = z.infer<typeof slotSchema>;
+
+function WorkScheduleDialog({ zoneId, zoneName }: { zoneId: number; zoneName: string }) {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+
+  const { data: schedules = [], isLoading } = useListZoneSchedules(
+    { zoneId },
+    { query: { enabled: open } }
+  );
+
+  const upsert = useUpsertZoneSchedule();
+  const del    = useDeleteZoneSchedule();
+
+  const form = useForm<SlotForm>({
+    resolver: zodResolver(slotSchema),
+    defaultValues: { dayOfWeek: 1, startTime: "08:00", endTime: "17:00" },
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListZoneSchedulesQueryKey({ zoneId }) });
+
+  async function onAdd(values: SlotForm) {
+    await upsert.mutateAsync(
+      { data: { zoneId, ...values } },
+      {
+        onSuccess: () => { toast({ title: "Работният час е записан" }); invalidate(); },
+        onError:   () => toast({ title: "Грешка при запис", variant: "destructive" }),
+      }
+    );
+  }
+
+  async function onDelete(id: number) {
+    await del.mutateAsync(
+      { id },
+      {
+        onSuccess: () => { toast({ title: "Часът е изтрит" }); invalidate(); },
+        onError:   () => toast({ title: "Грешка при изтриване", variant: "destructive" }),
+      }
+    );
+  }
+
+  const scheduledDays = new Set(schedules.map((s) => s.dayOfWeek));
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Работно Време">
+          <Clock className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Работно Време — {zoneName}</DialogTitle>
+        </DialogHeader>
+
+        {/* Existing slots */}
+        <div className="space-y-1 max-h-52 overflow-y-auto">
+          {isLoading ? (
+            <Skeleton className="h-8 w-full" />
+          ) : schedules.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Няма зададено работно време.</p>
+          ) : (
+            schedules.map((s) => (
+              <div key={s.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
+                <span className="font-medium w-32">{DAYS.find((d) => d.iso === s.dayOfWeek)?.label}</span>
+                <span className="font-mono text-muted-foreground">{s.startTime} — {s.endTime}</span>
+                <Button
+                  variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
+                  onClick={() => onDelete(s.id)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Add slot form */}
+        <div className="border-t border-border pt-4">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Добави / Замени ден</p>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onAdd)} className="space-y-3">
+              <FormField control={form.control} name="dayOfWeek" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ден</FormLabel>
+                  <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {DAYS.map((d) => (
+                        <SelectItem key={d.iso} value={String(d.iso)}>
+                          {d.label}{scheduledDays.has(d.iso) ? " ✓" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField control={form.control} name="startTime" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Начало</FormLabel>
+                    <FormControl><Input type="time" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="endTime" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Край</FormLabel>
+                    <FormControl><Input type="time" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <Button type="submit" className="w-full" disabled={upsert.isPending}>
+                {scheduledDays.has(form.watch("dayOfWeek")) ? "Замени часа" : "Добави ден"}
+              </Button>
+            </form>
+          </Form>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Main ─── */
 export default function ZoneList() {
   const { data: zones, isLoading } = useListZones();
   const createZone = useCreateZone();
@@ -171,11 +315,15 @@ export default function ZoneList() {
                       {zone.name}
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{zone.description || "-"}</TableCell>
+                  <TableCell className="text-muted-foreground">{zone.description || "—"}</TableCell>
                   <TableCell><AccessLevelBadge level={zone.accessLevel} /></TableCell>
                   <TableCell className="text-center font-mono text-muted-foreground">{zone.cameraCount || 0}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
+                      {/* Work schedule */}
+                      <WorkScheduleDialog zoneId={zone.id} zoneName={zone.name} />
+
+                      {/* Edit */}
                       <Button
                         variant="ghost" size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
@@ -183,6 +331,8 @@ export default function ZoneList() {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
+
+                      {/* Delete */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
@@ -221,7 +371,7 @@ export default function ZoneList() {
 }
 
 function AccessLevelBadge({ level }: { level: string }) {
-  if (level === 'public') return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20"><ShieldCheck className="h-3 w-3 mr-1" />ПУБЛИЧЕН</Badge>;
-  if (level === 'secure') return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20"><ShieldAlert className="h-3 w-3 mr-1" />СИГУРЕН</Badge>;
+  if (level === "public")  return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20"><ShieldCheck className="h-3 w-3 mr-1" />ПУБЛИЧЕН</Badge>;
+  if (level === "secure")  return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20"><ShieldAlert className="h-3 w-3 mr-1" />СИГУРЕН</Badge>;
   return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20"><Shield className="h-3 w-3 mr-1" />ОГРАНИЧЕН</Badge>;
 }

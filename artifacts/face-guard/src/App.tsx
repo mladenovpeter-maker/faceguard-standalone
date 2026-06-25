@@ -16,6 +16,7 @@ import ZoneList from "@/pages/zones/index";
 import AccessRulesList from "@/pages/access-rules/index";
 import RecognitionList from "@/pages/recognitions/index";
 import AttendanceList from "@/pages/attendance/index";
+import LeavesPage from "@/pages/leaves/index";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +41,7 @@ function Router() {
         <Route path="/access-rules" component={AccessRulesList} />
         <Route path="/recognitions" component={RecognitionList} />
         <Route path="/attendance" component={AttendanceList} />
+        <Route path="/leaves" component={LeavesPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

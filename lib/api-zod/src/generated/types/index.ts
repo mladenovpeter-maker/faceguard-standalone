@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './absentRecord';
+export * from './absentRecordLeaveType';
 export * from './accessRule';
 export * from './accessRuleInput';
 export * from './attendanceRecord';
@@ -29,11 +31,20 @@ export * from './employeeUpdate';
 export * from './employeeUpdateStatus';
 export * from './healthStatus';
 export * from './hourlyActivity';
+export * from './leaveInput';
+export * from './leaveInputStatus';
+export * from './leaveInputType';
+export * from './leaveRecord';
+export * from './leaveRecordStatus';
+export * from './leaveRecordType';
 export * from './listAttendanceParams';
 export * from './listEmployeesParams';
 export * from './listEmployeesStatus';
+export * from './listLeavesParams';
+export * from './listLeavesStatus';
 export * from './listRecognitionsParams';
 export * from './listRecognitionsStatus';
+export * from './listZoneSchedulesParams';
 export * from './photoUpload';
 export * from './recognitionEvent';
 export * from './recognitionEventStatus';
@@ -46,3 +57,5 @@ export * from './zoneInput';
 export * from './zoneInputAccessLevel';
 export * from './zoneUpdate';
 export * from './zoneUpdateAccessLevel';
+export * from './zoneWorkSchedule';
+export * from './zoneWorkScheduleInput';

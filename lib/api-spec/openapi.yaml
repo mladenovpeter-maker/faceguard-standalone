@@ -24,6 +24,10 @@ tags:
     description: Access control rules
   - name: dashboard
     description: Dashboard summaries
+  - name: leaves
+    description: Employee leave management
+  - name: zone-schedules
+    description: Zone work schedule management
 
 paths:
   /healthz:
@@ -504,6 +508,181 @@ paths:
               schema:
                 $ref: "#/components/schemas/TodayAttendance"
 
+  # LEAVES
+  /leaves:
+    get:
+      operationId: listLeaves
+      tags: [leaves]
+      summary: List employee leaves
+      parameters:
+        - name: employeeId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [approved, pending, rejected, all]
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: activeOn
+          in: query
+          description: Filter leaves active on this date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Leaves list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaveRecord"
+    post:
+      operationId: createLeave
+      tags: [leaves]
+      summary: Create a leave record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeaveInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveRecord"
+
+  /leaves/{id}:
+    get:
+      operationId: getLeave
+      tags: [leaves]
+      summary: Get a single leave record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Leave record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveRecord"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateLeave
+      tags: [leaves]
+      summary: Update a leave record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeaveInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveRecord"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteLeave
+      tags: [leaves]
+      summary: Delete a leave record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ZONE WORK SCHEDULES
+  /zone-schedules:
+    get:
+      operationId: listZoneSchedules
+      tags: [zone-schedules]
+      summary: List zone work schedules
+      parameters:
+        - name: zoneId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Zone schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ZoneWorkSchedule"
+    post:
+      operationId: upsertZoneSchedule
+      tags: [zone-schedules]
+      summary: Create or update a zone work schedule slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZoneWorkScheduleInput"
+      responses:
+        "200":
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZoneWorkSchedule"
+
+  /zone-schedules/{id}:
+    delete:
+      operationId: deleteZoneSchedule
+      tags: [zone-schedules]
+      summary: Delete a zone work schedule slot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
   # DASHBOARD
   /dashboard/summary:
     get:
@@ -899,7 +1078,7 @@ components:
 
     TodayAttendance:
       type: object
-      required: [date, presentCount, absentCount, totalEmployees, records]
+      required: [date, presentCount, absentCount, onLeaveCount, totalEmployees, records, absentRecords]
       properties:
         date:
           type: string
@@ -908,12 +1087,144 @@ components:
           type: integer
         absentCount:
           type: integer
+        onLeaveCount:
+          type: integer
         totalEmployees:
           type: integer
         records:
           type: array
           items:
             $ref: "#/components/schemas/AttendanceRecord"
+        absentRecords:
+          type: array
+          items:
+            $ref: "#/components/schemas/AbsentRecord"
+
+    AbsentRecord:
+      type: object
+      required: [employeeId, employeeName, employeeNumber]
+      properties:
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        employeeNumber:
+          type: string
+        employeePhotoUrl:
+          type: ["string", "null"]
+        department:
+          type: string
+        position:
+          type: string
+        leaveId:
+          type: ["integer", "null"]
+        leaveType:
+          type: ["string", "null"]
+          enum: [paid_leave, unpaid_leave, sick_leave, other, null]
+        leaveReason:
+          type: ["string", "null"]
+        leaveFrom:
+          type: ["string", "null"]
+          format: date
+        leaveTo:
+          type: ["string", "null"]
+          format: date
+
+    LeaveRecord:
+      type: object
+      required: [id, employeeId, type, startDate, endDate, status, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: ["string", "null"]
+        employeeNumber:
+          type: ["string", "null"]
+        employeePhotoUrl:
+          type: ["string", "null"]
+        department:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [paid_leave, unpaid_leave, sick_leave, other]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        reason:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [approved, pending, rejected]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    LeaveInput:
+      type: object
+      required: [employeeId, type, startDate, endDate]
+      properties:
+        employeeId:
+          type: integer
+        type:
+          type: string
+          enum: [paid_leave, unpaid_leave, sick_leave, other]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [approved, pending, rejected]
+        notes:
+          type: string
+
+    ZoneWorkSchedule:
+      type: object
+      required: [id, zoneId, dayOfWeek, startTime, endTime]
+      properties:
+        id:
+          type: integer
+        zoneId:
+          type: integer
+        zoneName:
+          type: ["string", "null"]
+        dayOfWeek:
+          type: integer
+          description: 1=Monday, 2=Tuesday, ... 7=Sunday (ISO)
+          minimum: 1
+          maximum: 7
+        startTime:
+          type: string
+          description: "HH:MM"
+        endTime:
+          type: string
+          description: "HH:MM"
+
+    ZoneWorkScheduleInput:
+      type: object
+      required: [zoneId, dayOfWeek, startTime, endTime]
+      properties:
+        zoneId:
+          type: integer
+        dayOfWeek:
+          type: integer
+          minimum: 1
+          maximum: 7
+        startTime:
+          type: string
+        endTime:
+          type: string
 
     DashboardSummary:
       type: object

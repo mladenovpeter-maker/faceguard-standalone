@@ -5,12 +5,15 @@
  * FaceGuard - Face Recognition Access & Attendance System
  * OpenAPI spec version: 0.1.0
  */
+import type { AbsentRecord } from './absentRecord';
 import type { AttendanceRecord } from './attendanceRecord';
 
 export interface TodayAttendance {
   date: Date;
   presentCount: number;
   absentCount: number;
+  onLeaveCount: number;
   totalEmployees: number;
   records: AttendanceRecord[];
+  absentRecords: AbsentRecord[];
 }

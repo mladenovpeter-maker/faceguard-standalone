@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Activity, Camera, Users, ShieldCheck, Map, Clock, Video, MonitorPlay } from "lucide-react";
+import { Activity, Camera, Users, ShieldCheck, Map, Clock, Video, MonitorPlay, CalendarOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHealthCheck } from "@workspace/api-client-react";
 
@@ -12,6 +12,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/recognitions", label: "Лог на събития", icon: MonitorPlay },
     { href: "/employees", label: "Персонал", icon: Users },
     { href: "/attendance", label: "Присъствие", icon: Clock },
+    { href: "/leaves", label: "Отпуски", icon: CalendarOff },
     { href: "/access-rules", label: "Контрол на достъп", icon: ShieldCheck },
     { href: "/cameras", label: "Камери", icon: Video },
     { href: "/zones", label: "Зони", icon: Map },

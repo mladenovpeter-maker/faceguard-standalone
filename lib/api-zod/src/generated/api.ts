@@ -515,6 +515,7 @@ export const GetTodayAttendanceResponse = zod.object({
   "date": zod.coerce.date(),
   "presentCount": zod.number(),
   "absentCount": zod.number(),
+  "onLeaveCount": zod.number(),
   "totalEmployees": zod.number(),
   "records": zod.array(zod.object({
   "id": zod.number(),
@@ -528,8 +529,208 @@ export const GetTodayAttendanceResponse = zod.object({
   "zoneId": zod.number().nullish(),
   "zoneName": zod.string().nullish(),
   "totalMinutes": zod.number().nullish()
+})),
+  "absentRecords": zod.array(zod.object({
+  "employeeId": zod.number(),
+  "employeeName": zod.string(),
+  "employeeNumber": zod.string(),
+  "employeePhotoUrl": zod.string().nullish(),
+  "department": zod.string().optional(),
+  "position": zod.string().optional(),
+  "leaveId": zod.number().nullish(),
+  "leaveType": zod.union([zod.literal('paid_leave'),zod.literal('unpaid_leave'),zod.literal('sick_leave'),zod.literal('other'),zod.literal(null)]).nullish(),
+  "leaveReason": zod.string().nullish(),
+  "leaveFrom": zod.coerce.date().nullish(),
+  "leaveTo": zod.coerce.date().nullish()
 }))
 })
+
+
+/**
+ * @summary List employee leaves
+ */
+export const ListLeavesQueryParams = zod.object({
+  "employeeId": zod.coerce.number().nullish(),
+  "status": zod.enum(['approved', 'pending', 'rejected', 'all']).optional(),
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
+  "activeOn": zod.date().optional().describe('Filter leaves active on this date (YYYY-MM-DD)')
+})
+
+export const ListLeavesResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string().nullish(),
+  "employeeNumber": zod.string().nullish(),
+  "employeePhotoUrl": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "type": zod.enum(['paid_leave', 'unpaid_leave', 'sick_leave', 'other']),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "reason": zod.string().nullish(),
+  "status": zod.enum(['approved', 'pending', 'rejected']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListLeavesResponse = zod.array(ListLeavesResponseItem)
+
+
+/**
+ * @summary Create a leave record
+ */
+export const CreateLeaveBody = zod.object({
+  "employeeId": zod.number(),
+  "type": zod.enum(['paid_leave', 'unpaid_leave', 'sick_leave', 'other']),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "reason": zod.string().optional(),
+  "status": zod.enum(['approved', 'pending', 'rejected']).optional(),
+  "notes": zod.string().optional()
+})
+
+export const CreateLeaveResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string().nullish(),
+  "employeeNumber": zod.string().nullish(),
+  "employeePhotoUrl": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "type": zod.enum(['paid_leave', 'unpaid_leave', 'sick_leave', 'other']),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "reason": zod.string().nullish(),
+  "status": zod.enum(['approved', 'pending', 'rejected']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get a single leave record
+ */
+export const GetLeaveParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetLeaveResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string().nullish(),
+  "employeeNumber": zod.string().nullish(),
+  "employeePhotoUrl": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "type": zod.enum(['paid_leave', 'unpaid_leave', 'sick_leave', 'other']),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "reason": zod.string().nullish(),
+  "status": zod.enum(['approved', 'pending', 'rejected']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a leave record
+ */
+export const UpdateLeaveParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateLeaveBody = zod.object({
+  "employeeId": zod.number(),
+  "type": zod.enum(['paid_leave', 'unpaid_leave', 'sick_leave', 'other']),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "reason": zod.string().optional(),
+  "status": zod.enum(['approved', 'pending', 'rejected']).optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdateLeaveResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string().nullish(),
+  "employeeNumber": zod.string().nullish(),
+  "employeePhotoUrl": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "type": zod.enum(['paid_leave', 'unpaid_leave', 'sick_leave', 'other']),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "reason": zod.string().nullish(),
+  "status": zod.enum(['approved', 'pending', 'rejected']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a leave record
+ */
+export const DeleteLeaveParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteLeaveResponse = zod.void()
+
+
+/**
+ * @summary List zone work schedules
+ */
+export const ListZoneSchedulesQueryParams = zod.object({
+  "zoneId": zod.coerce.number().nullish()
+})
+
+export const listZoneSchedulesResponseDayOfWeekMax = 7;
+
+
+
+export const ListZoneSchedulesResponseItem = zod.object({
+  "id": zod.number(),
+  "zoneId": zod.number(),
+  "zoneName": zod.string().nullish(),
+  "dayOfWeek": zod.number().min(1).max(listZoneSchedulesResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
+  "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM')
+})
+export const ListZoneSchedulesResponse = zod.array(ListZoneSchedulesResponseItem)
+
+
+/**
+ * @summary Create or update a zone work schedule slot
+ */
+export const upsertZoneScheduleBodyDayOfWeekMax = 7;
+
+
+
+export const UpsertZoneScheduleBody = zod.object({
+  "zoneId": zod.number(),
+  "dayOfWeek": zod.number().min(1).max(upsertZoneScheduleBodyDayOfWeekMax),
+  "startTime": zod.string(),
+  "endTime": zod.string()
+})
+
+export const upsertZoneScheduleResponseDayOfWeekMax = 7;
+
+
+
+export const UpsertZoneScheduleResponse = zod.object({
+  "id": zod.number(),
+  "zoneId": zod.number(),
+  "zoneName": zod.string().nullish(),
+  "dayOfWeek": zod.number().min(1).max(upsertZoneScheduleResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
+  "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM')
+})
+
+
+/**
+ * @summary Delete a zone work schedule slot
+ */
+export const DeleteZoneScheduleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteZoneScheduleResponse = zod.void()
 
 
 /**

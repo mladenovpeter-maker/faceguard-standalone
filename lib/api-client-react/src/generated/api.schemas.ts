@@ -351,12 +351,145 @@ export interface AttendanceRecord {
   totalMinutes?: number | null;
 }
 
+/**
+ * @nullable
+ */
+export type AbsentRecordLeaveType = typeof AbsentRecordLeaveType[keyof typeof AbsentRecordLeaveType] | null;
+
+
+export const AbsentRecordLeaveType = {
+  paid_leave: 'paid_leave',
+  unpaid_leave: 'unpaid_leave',
+  sick_leave: 'sick_leave',
+  other: 'other',
+} as const;
+
+export interface AbsentRecord {
+  employeeId: number;
+  employeeName: string;
+  employeeNumber: string;
+  /** @nullable */
+  employeePhotoUrl?: string | null;
+  department?: string;
+  position?: string;
+  /** @nullable */
+  leaveId?: number | null;
+  /** @nullable */
+  leaveType?: AbsentRecordLeaveType;
+  /** @nullable */
+  leaveReason?: string | null;
+  /** @nullable */
+  leaveFrom?: string | null;
+  /** @nullable */
+  leaveTo?: string | null;
+}
+
 export interface TodayAttendance {
   date: string;
   presentCount: number;
   absentCount: number;
+  onLeaveCount: number;
   totalEmployees: number;
   records: AttendanceRecord[];
+  absentRecords: AbsentRecord[];
+}
+
+export type LeaveRecordType = typeof LeaveRecordType[keyof typeof LeaveRecordType];
+
+
+export const LeaveRecordType = {
+  paid_leave: 'paid_leave',
+  unpaid_leave: 'unpaid_leave',
+  sick_leave: 'sick_leave',
+  other: 'other',
+} as const;
+
+export type LeaveRecordStatus = typeof LeaveRecordStatus[keyof typeof LeaveRecordStatus];
+
+
+export const LeaveRecordStatus = {
+  approved: 'approved',
+  pending: 'pending',
+  rejected: 'rejected',
+} as const;
+
+export interface LeaveRecord {
+  id: number;
+  employeeId: number;
+  /** @nullable */
+  employeeName?: string | null;
+  /** @nullable */
+  employeeNumber?: string | null;
+  /** @nullable */
+  employeePhotoUrl?: string | null;
+  /** @nullable */
+  department?: string | null;
+  type: LeaveRecordType;
+  startDate: string;
+  endDate: string;
+  /** @nullable */
+  reason?: string | null;
+  status: LeaveRecordStatus;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export type LeaveInputType = typeof LeaveInputType[keyof typeof LeaveInputType];
+
+
+export const LeaveInputType = {
+  paid_leave: 'paid_leave',
+  unpaid_leave: 'unpaid_leave',
+  sick_leave: 'sick_leave',
+  other: 'other',
+} as const;
+
+export type LeaveInputStatus = typeof LeaveInputStatus[keyof typeof LeaveInputStatus];
+
+
+export const LeaveInputStatus = {
+  approved: 'approved',
+  pending: 'pending',
+  rejected: 'rejected',
+} as const;
+
+export interface LeaveInput {
+  employeeId: number;
+  type: LeaveInputType;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  status?: LeaveInputStatus;
+  notes?: string;
+}
+
+export interface ZoneWorkSchedule {
+  id: number;
+  zoneId: number;
+  /** @nullable */
+  zoneName?: string | null;
+  /**
+     * 1=Monday, 2=Tuesday, ... 7=Sunday (ISO)
+     * @minimum 1
+     * @maximum 7
+     */
+  dayOfWeek: number;
+  /** HH:MM */
+  startTime: string;
+  /** HH:MM */
+  endTime: string;
+}
+
+export interface ZoneWorkScheduleInput {
+  zoneId: number;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
 }
 
 export interface DashboardSummary {
@@ -432,6 +565,37 @@ date?: string;
  * @nullable
  */
 employeeId?: number | null;
+/**
+ * @nullable
+ */
+zoneId?: number | null;
+};
+
+export type ListLeavesParams = {
+/**
+ * @nullable
+ */
+employeeId?: number | null;
+status?: ListLeavesStatus;
+from?: string;
+to?: string;
+/**
+ * Filter leaves active on this date (YYYY-MM-DD)
+ */
+activeOn?: string;
+};
+
+export type ListLeavesStatus = typeof ListLeavesStatus[keyof typeof ListLeavesStatus];
+
+
+export const ListLeavesStatus = {
+  approved: 'approved',
+  pending: 'pending',
+  rejected: 'rejected',
+  all: 'all',
+} as const;
+
+export type ListZoneSchedulesParams = {
 /**
  * @nullable
  */
