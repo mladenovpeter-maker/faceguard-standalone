@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, ilike, or, and, desc } from "drizzle-orm";
-import { db, employeesTable } from "@workspace/db";
+import { db, employeesTable, recognitionEventsTable } from "@workspace/db";
 import {
   ListEmployeesQueryParams,
   CreateEmployeeBody,
@@ -141,15 +141,19 @@ router.delete("/employees/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [employee] = await db
-    .delete(employeesTable)
-    .where(eq(employeesTable.id, params.data.id))
-    .returning();
+  const empId = params.data.id;
 
-  if (!employee) {
+  const [existing] = await db.select({ id: employeesTable.id }).from(employeesTable).where(eq(employeesTable.id, empId));
+  if (!existing) {
     res.status(404).json({ error: "Employee not found" });
     return;
   }
+
+  // Null out employee_id on recognition events (nullable FK, no cascade)
+  await db.update(recognitionEventsTable).set({ employeeId: null }).where(eq(recognitionEventsTable.employeeId, empId));
+
+  // Delete employee — attendance, leaves, access_rules cascade automatically
+  await db.delete(employeesTable).where(eq(employeesTable.id, empId));
 
   res.sendStatus(204);
 });

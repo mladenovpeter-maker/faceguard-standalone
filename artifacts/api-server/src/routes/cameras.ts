@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, camerasTable, zonesTable } from "@workspace/db";
+import { db, camerasTable, zonesTable, recognitionEventsTable } from "@workspace/db";
 import {
   CreateCameraBody,
   GetCameraParams,
@@ -137,15 +137,19 @@ router.delete("/cameras/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [camera] = await db
-    .delete(camerasTable)
-    .where(eq(camerasTable.id, params.data.id))
-    .returning();
+  const cameraId = params.data.id;
 
-  if (!camera) {
+  const [existing] = await db.select({ id: camerasTable.id }).from(camerasTable).where(eq(camerasTable.id, cameraId));
+  if (!existing) {
     res.status(404).json({ error: "Camera not found" });
     return;
   }
+
+  // Delete recognition events first (camera_id is NOT NULL, no cascade)
+  await db.delete(recognitionEventsTable).where(eq(recognitionEventsTable.cameraId, cameraId));
+
+  // Now delete the camera
+  await db.delete(camerasTable).where(eq(camerasTable.id, cameraId));
 
   res.sendStatus(204);
 });

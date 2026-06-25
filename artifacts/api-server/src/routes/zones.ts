@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, zonesTable, camerasTable } from "@workspace/db";
+import { eq, sql, inArray } from "drizzle-orm";
+import { db, zonesTable, camerasTable, recognitionEventsTable, attendanceTable } from "@workspace/db";
 import {
   CreateZoneBody,
   UpdateZoneParams,
@@ -86,15 +86,34 @@ router.delete("/zones/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [zone] = await db
-    .delete(zonesTable)
-    .where(eq(zonesTable.id, params.data.id))
-    .returning();
+  const zoneId = params.data.id;
 
-  if (!zone) {
+  // Check zone exists
+  const [existing] = await db.select({ id: zonesTable.id }).from(zonesTable).where(eq(zonesTable.id, zoneId));
+  if (!existing) {
     res.status(404).json({ error: "Zone not found" });
     return;
   }
+
+  // 1. Find cameras in this zone
+  const cameras = await db.select({ id: camerasTable.id }).from(camerasTable).where(eq(camerasTable.zoneId, zoneId));
+  const cameraIds = cameras.map(c => c.id);
+
+  // 2. Delete recognition events for those cameras
+  if (cameraIds.length > 0) {
+    await db.delete(recognitionEventsTable).where(inArray(recognitionEventsTable.cameraId, cameraIds));
+  }
+
+  // 3. Delete cameras in this zone
+  if (cameraIds.length > 0) {
+    await db.delete(camerasTable).where(eq(camerasTable.zoneId, zoneId));
+  }
+
+  // 4. Null out attendance.zone_id (nullable FK)
+  await db.update(attendanceTable).set({ zoneId: null }).where(eq(attendanceTable.zoneId, zoneId));
+
+  // 5. Delete the zone (zone_work_schedules and access_rules cascade automatically)
+  await db.delete(zonesTable).where(eq(zonesTable.id, zoneId));
 
   res.sendStatus(204);
 });
