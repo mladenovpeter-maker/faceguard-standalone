@@ -834,6 +834,8 @@ export const GetDashboardPresenceResponseItem = zod.object({
   "photoUrl": zod.string().nullish(),
   "status": zod.string(),
   "present": zod.boolean(),
+  "onLeave": zod.boolean(),
+  "leaveType": zod.string().nullish(),
   "firstSeen": zod.coerce.date().nullish(),
   "lastSeen": zod.coerce.date().nullish(),
   "totalMinutes": zod.number().nullish()

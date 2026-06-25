@@ -577,6 +577,9 @@ export interface EmployeePresence {
   photoUrl?: string | null;
   status: string;
   present: boolean;
+  onLeave: boolean;
+  /** @nullable */
+  leaveType?: string | null;
   /** @nullable */
   firstSeen?: string | null;
   /** @nullable */

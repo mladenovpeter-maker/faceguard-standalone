@@ -1,27 +1,35 @@
 import { useGetDashboardSummary, useGetRecentEvents, useGetDashboardPresence } from "@workspace/api-client-react";
-import { UserX, Video, ShieldAlert, Users, Clock, TrendingUp, Building2 } from "lucide-react";
+import { UserX, Video, ShieldAlert, Users, Clock, TrendingUp, Building2, TreePalm, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts";
+import { useState } from "react";
+
+const LEAVE_LABELS: Record<string, string> = {
+  paid_leave: "Платен отпуск",
+  sick_leave: "Болничен",
+  unpaid_leave: "Неплатен",
+  maternity_leave: "Майчинство",
+  other: "Друго",
+};
 
 export default function Dashboard() {
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary({ query: { refetchInterval: 30000 } });
   const { data: events, isLoading: loadingEvents } = useGetRecentEvents({ query: { refetchInterval: 5000 } });
   const { data: presence, isLoading: loadingPresence } = useGetDashboardPresence({ query: { refetchInterval: 15000 } });
+  const [absentExpanded, setAbsentExpanded] = useState(false);
 
-  const presentCount = presence?.filter(p => p.present).length ?? 0;
-  const absentCount = presence?.filter(p => !p.present).length ?? 0;
-  const sorted = presence ? [...presence].sort((a, b) => {
-    if (a.present && !b.present) return -1;
-    if (!a.present && b.present) return 1;
-    if (a.present && b.present) {
-      return new Date(a.firstSeen!).getTime() - new Date(b.firstSeen!).getTime();
-    }
-    return a.firstName.localeCompare(b.firstName);
-  }) : [];
+  const presentList = presence?.filter(p => p.present && !p.onLeave) ?? [];
+  const onLeaveList = presence?.filter(p => p.onLeave) ?? [];
+  const absentList = presence?.filter(p => !p.present && !p.onLeave) ?? [];
 
-  // Arrival distribution (30-min buckets from 06:00 to 12:00)
+  // Sort present by arrival time (earliest first)
+  const sortedPresent = [...presentList].sort((a, b) =>
+    new Date(a.firstSeen!).getTime() - new Date(b.firstSeen!).getTime()
+  );
+
+  // Arrival distribution (30-min buckets 06:00–12:00)
   const arrivalSlots: { label: string; count: number; late: boolean }[] = [];
   for (let h = 6; h <= 11; h++) {
     for (const m of [0, 30]) {
@@ -52,6 +60,7 @@ export default function Dashboard() {
     }
   }
   const depts = Object.entries(deptMap).sort((a, b) => b[1].total - a[1].total);
+  const totalActive = presence?.length ?? 0;
 
   return (
     <div className="space-y-5">
@@ -62,7 +71,6 @@ export default function Dashboard() {
           Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-lg" />)
         ) : (
           <>
-            {/* В СГРАДАТА */}
             <Card className="border-green-500/30 bg-green-500/5 relative overflow-hidden">
               <div className="absolute top-3 right-3">
                 <span className="relative flex h-3 w-3">
@@ -75,43 +83,39 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="px-4 pb-4">
                 <div className="text-3xl font-bold font-mono text-green-500">
-                  {presentCount}
-                  <span className="text-muted-foreground text-xl font-normal ml-1">/ {(presence?.length ?? 0)}</span>
+                  {presentList.length}
+                  <span className="text-muted-foreground text-xl font-normal ml-1">/ {totalActive}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">активни служители</p>
               </CardContent>
             </Card>
 
-            {/* ОТСЪСТВАТ */}
-            <Card className={absentCount > 0 ? "border-border bg-card" : "border-border bg-card"}>
+            <Card className={onLeaveList.length > 0 ? "border-blue-500/30 bg-blue-500/5" : "border-border bg-card"}>
+              <CardHeader className="pb-1 pt-4 px-4 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">В отпуска</CardTitle>
+                <TreePalm className={`h-4 w-4 ${onLeaveList.length > 0 ? "text-blue-400" : "text-muted-foreground"}`} />
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className={`text-3xl font-bold font-mono ${onLeaveList.length > 0 ? "text-blue-400" : "text-muted-foreground"}`}>
+                  {onLeaveList.length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {onLeaveList.length === 0 ? "Никой в отпуска" : "одобрен отпуск"}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-card">
               <CardHeader className="pb-1 pt-4 px-4 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Отсъстват</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent className="px-4 pb-4">
-                <div className="text-3xl font-bold font-mono text-muted-foreground">{absentCount}</div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {absentCount === 0 ? "Всички са на работа" : `служителя без регистрация`}
-                </p>
+                <div className="text-3xl font-bold font-mono text-muted-foreground">{absentList.length}</div>
+                <p className="text-xs text-muted-foreground mt-0.5">без регистрация днес</p>
               </CardContent>
             </Card>
 
-            {/* КАМЕРИ */}
-            <Card className={(summary && summary.onlineCameras < summary.totalCameras) ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-card"}>
-              <CardHeader className="pb-1 pt-4 px-4 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Камери</CardTitle>
-                <Video className={`h-4 w-4 ${summary && summary.onlineCameras < summary.totalCameras ? "text-amber-500" : "text-muted-foreground"}`} />
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="text-3xl font-bold font-mono">
-                  {summary?.onlineCameras ?? 0}
-                  <span className="text-muted-foreground text-xl font-normal ml-1">/ {summary?.totalCameras ?? 0}</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">онлайн</p>
-              </CardContent>
-            </Card>
-
-            {/* СИГНАЛИ */}
             <Card className={(summary && (summary.unknownToday + summary.deniedToday) > 0) ? "border-destructive/40 bg-destructive/5" : "border-border bg-card"}>
               <CardHeader className="pb-1 pt-4 px-4 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Сигнали</CardTitle>
@@ -130,85 +134,123 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── PRESENCE WALL (full width) ── */}
-      <div className="grid grid-cols-1 gap-5">
-
-        {/* PRESENCE WALL */}
-        <Card className="border-border bg-card">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium uppercase tracking-wider font-mono text-muted-foreground">
-              Кой е в сградата
-            </CardTitle>
-            {!loadingPresence && (
-              <Badge variant="outline" className="font-mono text-xs">
-                {presentCount} ПРИСЪСТВА · {absentCount} ОТСЪСТВА
-              </Badge>
-            )}
-          </CardHeader>
-          <CardContent>
-            {loadingPresence ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
-                {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
-              </div>
-            ) : sorted.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-sm">Няма активни служители</div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
-                {sorted.map(emp => {
-                  const initials = `${emp.firstName[0]}${emp.lastName[0]}`;
-                  const arrivalTime = emp.firstSeen
-                    ? new Date(emp.firstSeen).toLocaleTimeString("bg-BG", { hour: "2-digit", minute: "2-digit" })
-                    : null;
-                  const minutes = emp.totalMinutes;
-                  const hours = minutes != null ? Math.floor(minutes / 60) : null;
-                  const mins = minutes != null ? minutes % 60 : null;
-
-                  return (
-                    <div
-                      key={emp.id}
-                      className={`rounded-lg border p-3 flex flex-col items-center gap-2 text-center transition-colors ${
-                        emp.present
-                          ? "border-green-500/30 bg-green-500/5 hover:bg-green-500/10"
-                          : "border-border bg-muted/20 opacity-60"
-                      }`}
-                    >
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center overflow-hidden text-sm font-bold border-2 ${emp.present ? "border-green-500/40 bg-green-500/20 text-green-700 dark:text-green-400" : "border-border bg-muted text-muted-foreground"}`}>
-                        {emp.photoUrl ? (
-                          <img src={emp.photoUrl} alt={emp.firstName} className="h-full w-full object-cover" />
-                        ) : initials}
-                      </div>
-                      <div className="w-full min-w-0">
-                        <p className="text-xs font-semibold truncate leading-tight">{emp.firstName} {emp.lastName}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{emp.department}</p>
-                      </div>
-                      {emp.present ? (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <Badge variant="outline" className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 text-[10px] px-1.5 py-0 font-mono">
+      {/* ── PRESENCE WALL ── */}
+      <Card className="border-border bg-card">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-medium uppercase tracking-wider font-mono text-muted-foreground">
+            Кой е в сградата
+          </CardTitle>
+          {!loadingPresence && (
+            <div className="flex gap-2 flex-wrap justify-end">
+              <Badge variant="outline" className="font-mono text-xs bg-green-500/10 text-green-600 border-green-500/20">{presentList.length} присъства</Badge>
+              {onLeaveList.length > 0 && <Badge variant="outline" className="font-mono text-xs bg-blue-500/10 text-blue-500 border-blue-500/20">{onLeaveList.length} отпуска</Badge>}
+              {absentList.length > 0 && <Badge variant="outline" className="font-mono text-xs">{absentList.length} отсъства</Badge>}
+            </div>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {loadingPresence ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
+            </div>
+          ) : (
+            <>
+              {/* PRESENT */}
+              {sortedPresent.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">● Присъстват</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                    {sortedPresent.map(emp => {
+                      const initials = `${emp.firstName[0]}${emp.lastName[0]}`;
+                      const arrivalTime = emp.firstSeen
+                        ? new Date(emp.firstSeen).toLocaleTimeString("bg-BG", { hour: "2-digit", minute: "2-digit" })
+                        : null;
+                      const hours = emp.totalMinutes != null ? Math.floor(emp.totalMinutes / 60) : null;
+                      const mins = emp.totalMinutes != null ? emp.totalMinutes % 60 : null;
+                      return (
+                        <div key={emp.id} className="rounded-lg border border-green-500/30 bg-green-500/5 p-2.5 flex flex-col items-center gap-1.5 text-center hover:bg-green-500/10 transition-colors">
+                          <div className="h-9 w-9 rounded-full flex items-center justify-center overflow-hidden text-xs font-bold border-2 border-green-500/40 bg-green-500/20 text-green-700 dark:text-green-400">
+                            {emp.photoUrl ? <img src={emp.photoUrl} alt="" className="h-full w-full object-cover" /> : initials}
+                          </div>
+                          <div className="w-full min-w-0">
+                            <p className="text-[11px] font-semibold truncate leading-tight">{emp.firstName} {emp.lastName}</p>
+                            <p className="text-[9px] text-muted-foreground truncate">{emp.department}</p>
+                          </div>
+                          <Badge variant="outline" className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 text-[9px] px-1 py-0 font-mono h-4">
                             ▶ {arrivalTime}
                           </Badge>
                           {hours !== null && (
-                            <span className="text-[10px] text-muted-foreground font-mono">{hours}ч {mins}м</span>
+                            <span className="text-[9px] text-muted-foreground font-mono">{hours}ч {mins}м</span>
                           )}
                         </div>
-                      ) : (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-dashed text-muted-foreground">
-                          ОТСЪСТВА
-                        </Badge>
-                      )}
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ON LEAVE */}
+              {onLeaveList.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">◌ В отпуска</p>
+                  <div className="flex flex-wrap gap-2">
+                    {onLeaveList.map(emp => {
+                      const initials = `${emp.firstName[0]}${emp.lastName[0]}`;
+                      const label = LEAVE_LABELS[emp.leaveType ?? "other"] ?? emp.leaveType;
+                      return (
+                        <div key={emp.id} className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2 flex items-center gap-2.5 min-w-0">
+                          <div className="h-7 w-7 shrink-0 rounded-full flex items-center justify-center overflow-hidden text-[10px] font-bold border border-blue-500/30 bg-blue-500/15 text-blue-500">
+                            {emp.photoUrl ? <img src={emp.photoUrl} alt="" className="h-full w-full object-cover" /> : initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium truncate">{emp.firstName} {emp.lastName}</p>
+                            <p className="text-[9px] text-blue-400 font-mono truncate">{label}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ABSENT — compact collapsible list */}
+              {absentList.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setAbsentExpanded(v => !v)}
+                    className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2 hover:text-foreground transition-colors"
+                  >
+                    ○ Отсъстват ({absentList.length})
+                    {absentExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </button>
+                  {absentExpanded && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {absentList.map(emp => (
+                        <div key={emp.id} className="rounded-md border border-dashed border-border px-2.5 py-1 flex items-center gap-1.5 opacity-60">
+                          <div className="h-5 w-5 shrink-0 rounded-full bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground">
+                            {emp.firstName[0]}{emp.lastName[0]}
+                          </div>
+                          <span className="text-xs text-muted-foreground">{emp.firstName} {emp.lastName}</span>
+                          <span className="text-[9px] text-muted-foreground/60 font-mono">{emp.department}</span>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  )}
+                </div>
+              )}
 
-      </div>
+              {!sortedPresent.length && !onLeaveList.length && !absentList.length && (
+                <div className="py-10 text-center text-muted-foreground text-sm">Няма активни служители</div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* ── BOTTOM ROW: Arrival Chart + Department Breakdown ── */}
+      {/* ── CHARTS ROW ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        {/* ARRIVAL DISTRIBUTION */}
+        {/* ARRIVAL CHART */}
         <Card className="lg:col-span-2 border-border bg-card">
           <CardHeader className="pb-3 flex flex-row items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -228,24 +270,16 @@ export default function Dashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={arrivalSlots} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis
-                      dataKey="label"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={10}
-                      tick={{ fontFamily: "monospace" }}
-                    />
+                    <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={10} tick={{ fontFamily: "monospace" }} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} allowDecimals={false} />
                     <RechartsTooltip
                       contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", fontSize: 12 }}
                       formatter={(v: number) => [`${v} влизания`]}
                       cursor={{ fill: "hsl(var(--muted))" }}
                     />
-                    <Bar dataKey="count" radius={[3, 3, 0, 0]} name="Влизания">
+                    <Bar dataKey="count" radius={[3, 3, 0, 0]}>
                       {arrivalSlots.map((slot, i) => (
-                        <Cell
-                          key={i}
-                          fill={slot.late ? "hsl(38 92% 50%)" : "hsl(142 71% 45%)"}
-                        />
+                        <Cell key={i} fill={slot.late ? "hsl(38 92% 50%)" : "hsl(142 71% 45%)"} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -291,7 +325,7 @@ export default function Dashboard() {
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5 text-right">{pct}% присъствие</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 text-right">{pct}%</p>
                   </div>
                 );
               })
@@ -302,20 +336,63 @@ export default function Dashboard() {
                   <TrendingUp className="h-3 w-3" /> Общо
                 </span>
                 <span className="text-xs font-mono font-semibold">
-                  {presentCount}/{(presence?.length ?? 0)} —{" "}
-                  {presence?.length ? Math.round((presentCount / presence.length) * 100) : 0}%
+                  {presentList.length}/{totalActive} — {totalActive ? Math.round((presentList.length / totalActive) * 100) : 0}%
                 </span>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* ── LIVE FEED ── */}
+      <Card className="border-border bg-card">
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-medium uppercase tracking-wider font-mono text-muted-foreground">Лог на събития</CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-[10px] text-muted-foreground font-mono">НА ЖИВО</span>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loadingEvents ? (
+            <div className="p-4 space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded" />)}
+            </div>
+          ) : events && events.length > 0 ? (
+            <div className="divide-y divide-border">
+              {events.map((event) => (
+                <div key={event.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-muted/40 transition-colors">
+                  <div className={`h-7 w-7 shrink-0 rounded-full overflow-hidden border-2 flex items-center justify-center text-[9px] font-bold ${
+                    event.status === "recognized" ? "border-green-500/40 bg-green-500/10 text-green-600" :
+                    event.status === "denied" ? "border-red-500/40 bg-red-500/10 text-red-500" :
+                    "border-amber-500/40 bg-amber-500/10 text-amber-600"
+                  }`}>
+                    {event.snapshotUrl ? (
+                      <img src={event.snapshotUrl} alt="" className="h-full w-full object-cover" />
+                    ) : event.status === "recognized" && event.employeeName ? (
+                      `${event.employeeName[0]}${event.employeeName.split(" ")[1]?.[0] ?? ""}`
+                    ) : (
+                      <UserX className="h-3.5 w-3.5" />
+                    )}
+                  </div>
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${event.status === "recognized" ? "bg-green-500" : event.status === "denied" ? "bg-red-500" : "bg-amber-500"}`} />
+                  <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                    <p className="text-xs font-medium truncate">
+                      {event.status === "recognized" ? event.employeeName : "Непознато лице"}
+                    </p>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-[10px] text-muted-foreground truncate hidden sm:block">{event.cameraName} · {event.zoneName}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground">{new Date(event.detectedAt).toLocaleTimeString("bg-BG")}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground text-sm">Няма скорошни събития</div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
-}
-
-function EventDot({ status }: { status: string }) {
-  if (status === "recognized") return <span className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0 mt-1" />;
-  if (status === "denied") return <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0 mt-1" />;
-  return <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0 mt-1" />;
 }

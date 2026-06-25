@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, gte, sql, and } from "drizzle-orm";
-import { db, employeesTable, camerasTable, zonesTable, recognitionEventsTable, attendanceTable } from "@workspace/db";
+import { eq, desc, gte, sql, and, lte } from "drizzle-orm";
+import { db, employeesTable, camerasTable, zonesTable, recognitionEventsTable, attendanceTable, leavesTable } from "@workspace/db";
 import {
   GetDashboardSummaryResponse,
   GetRecentEventsResponse,
@@ -126,6 +126,7 @@ router.get("/dashboard/presence", async (_req, res): Promise<void> => {
       firstSeen: attendanceTable.firstSeen,
       lastSeen: attendanceTable.lastSeen,
       totalMinutes: attendanceTable.totalMinutes,
+      leaveType: leavesTable.type,
     })
     .from(employeesTable)
     .leftJoin(
@@ -135,12 +136,23 @@ router.get("/dashboard/presence", async (_req, res): Promise<void> => {
         eq(attendanceTable.date, today),
       ),
     )
+    .leftJoin(
+      leavesTable,
+      and(
+        eq(leavesTable.employeeId, employeesTable.id),
+        eq(leavesTable.status, "approved"),
+        lte(leavesTable.startDate, today),
+        gte(leavesTable.endDate, today),
+      ),
+    )
     .where(eq(employeesTable.status, "active"))
     .orderBy(employeesTable.firstName);
 
   const result = rows.map(r => ({
     ...r,
     present: r.firstSeen !== null,
+    onLeave: r.leaveType !== null,
+    leaveType: r.leaveType ?? null,
     firstSeen: r.firstSeen ? r.firstSeen.toISOString() : null,
     lastSeen: r.lastSeen ? r.lastSeen.toISOString() : null,
   }));

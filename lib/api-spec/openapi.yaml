@@ -1379,7 +1379,7 @@ components:
 
     EmployeePresence:
       type: object
-      required: [id, firstName, lastName, employeeNumber, department, position, status, present]
+      required: [id, firstName, lastName, employeeNumber, department, position, status, present, onLeave]
       properties:
         id:
           type: integer
@@ -1399,6 +1399,10 @@ components:
           type: string
         present:
           type: boolean
+        onLeave:
+          type: boolean
+        leaveType:
+          type: ["string", "null"]
         firstSeen:
           type: ["string", "null"]
           format: date-time
