@@ -23,6 +23,7 @@ import type {
   AccessRule,
   AccessRuleInput,
   AttendanceRecord,
+  AttendanceReport,
   Camera,
   CameraInput,
   CameraTestResult,
@@ -31,6 +32,7 @@ import type {
   Employee,
   EmployeeInput,
   EmployeeUpdate,
+  GetAttendanceReportParams,
   HealthStatus,
   HourlyActivity,
   LeaveInput,
@@ -1841,6 +1843,90 @@ export function useGetTodayAttendance<TData = Awaited<ReturnType<typeof getToday
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetTodayAttendanceQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAttendanceReportUrl = (params: GetAttendanceReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/attendance/report?${stringifiedParams}` : `/api/attendance/report`
+}
+
+/**
+ * @summary Attendance report for a date range
+ */
+export const getAttendanceReport = async (params: GetAttendanceReportParams, options?: RequestInit): Promise<AttendanceReport> => {
+
+  return customFetch<AttendanceReport>(getGetAttendanceReportUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAttendanceReportQueryKey = (params?: GetAttendanceReportParams,) => {
+    return [
+    `/api/attendance/report`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAttendanceReportQueryOptions = <TData = Awaited<ReturnType<typeof getAttendanceReport>>, TError = ErrorType<unknown>>(params: GetAttendanceReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttendanceReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAttendanceReportQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAttendanceReport>>> = ({ signal }) => getAttendanceReport(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAttendanceReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAttendanceReportQueryResult = NonNullable<Awaited<ReturnType<typeof getAttendanceReport>>>
+export type GetAttendanceReportQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Attendance report for a date range
+ */
+
+export function useGetAttendanceReport<TData = Awaited<ReturnType<typeof getAttendanceReport>>, TError = ErrorType<unknown>>(
+ params: GetAttendanceReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttendanceReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAttendanceReportQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

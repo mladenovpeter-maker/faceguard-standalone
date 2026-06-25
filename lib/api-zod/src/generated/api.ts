@@ -549,6 +549,43 @@ export const GetTodayAttendanceResponse = zod.object({
 
 
 /**
+ * @summary Attendance report for a date range
+ */
+export const GetAttendanceReportQueryParams = zod.object({
+  "from": zod.date(),
+  "to": zod.date(),
+  "employeeId": zod.coerce.number().nullish(),
+  "department": zod.coerce.string().nullish()
+})
+
+export const GetAttendanceReportResponse = zod.object({
+  "from": zod.coerce.date(),
+  "to": zod.coerce.date(),
+  "totalEmployees": zod.number(),
+  "workingDays": zod.number(),
+  "rows": zod.array(zod.object({
+  "employeeId": zod.number(),
+  "employeeName": zod.string(),
+  "employeeNumber": zod.string(),
+  "employeePhotoUrl": zod.string().nullish(),
+  "department": zod.string(),
+  "position": zod.string(),
+  "daysPresent": zod.number(),
+  "daysAbsent": zod.number(),
+  "daysOnLeave": zod.number(),
+  "totalMinutes": zod.number(),
+  "avgFirstSeen": zod.string().nullish(),
+  "avgLastSeen": zod.string().nullish(),
+  "firstSeen": zod.coerce.date().nullish(),
+  "lastSeen": zod.coerce.date().nullish(),
+  "zoneName": zod.string().nullish(),
+  "leaveType": zod.string().nullish(),
+  "leaveReason": zod.string().nullish()
+}))
+})
+
+
+/**
  * @summary List employee leaves
  */
 export const ListLeavesQueryParams = zod.object({

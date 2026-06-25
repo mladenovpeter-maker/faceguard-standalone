@@ -20,7 +20,7 @@ function formatUptime(seconds: number): string {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-  const { data: health } = useHealthCheck({ query: { refetchInterval: 30000 } });
+  const { data: health } = useHealthCheck();
   const { user, logout } = useAuth();
   const [changePwOpen, setChangePwOpen] = useState(false);
 

@@ -349,6 +349,42 @@ export interface RecognitionInput {
   detectedAt: string;
 }
 
+export interface AttendanceReportRow {
+  employeeId: number;
+  employeeName: string;
+  employeeNumber: string;
+  /** @nullable */
+  employeePhotoUrl?: string | null;
+  department: string;
+  position: string;
+  daysPresent: number;
+  daysAbsent: number;
+  daysOnLeave: number;
+  totalMinutes: number;
+  /** @nullable */
+  avgFirstSeen?: string | null;
+  /** @nullable */
+  avgLastSeen?: string | null;
+  /** @nullable */
+  firstSeen?: string | null;
+  /** @nullable */
+  lastSeen?: string | null;
+  /** @nullable */
+  zoneName?: string | null;
+  /** @nullable */
+  leaveType?: string | null;
+  /** @nullable */
+  leaveReason?: string | null;
+}
+
+export interface AttendanceReport {
+  from: string;
+  to: string;
+  totalEmployees: number;
+  workingDays: number;
+  rows: AttendanceReportRow[];
+}
+
 export interface AttendanceRecord {
   id: number;
   employeeId: number;
@@ -587,6 +623,19 @@ employeeId?: number | null;
  * @nullable
  */
 zoneId?: number | null;
+};
+
+export type GetAttendanceReportParams = {
+from: string;
+to: string;
+/**
+ * @nullable
+ */
+employeeId?: number | null;
+/**
+ * @nullable
+ */
+department?: string | null;
 };
 
 export type ListLeavesParams = {
