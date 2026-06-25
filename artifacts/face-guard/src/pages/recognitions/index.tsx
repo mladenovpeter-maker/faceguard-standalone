@@ -1,5 +1,5 @@
 import { useListRecognitions } from "@workspace/api-client-react";
-import { Search, UserX, Image as ImageIcon } from "lucide-react";
+import { Search, Image as ImageIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -10,34 +10,34 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 
 export default function RecognitionList() {
   const [status, setStatus] = useState<"all" | "recognized" | "unknown" | "denied">("all");
-  const { data: recognitions, isLoading } = useListRecognitions({ 
+  const { data: recognitions, isLoading } = useListRecognitions({
     status: status === "all" ? undefined : status,
-    limit: 100 
+    limit: 100
   });
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Event Log</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Лог на събития</h1>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 items-center bg-card p-4 rounded-lg border border-border">
         <div className="relative flex-1 w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search events..." 
+          <Input
+            placeholder="Търсене на събития..."
             className="pl-9 font-mono bg-background"
           />
         </div>
         <Select value={status} onValueChange={(v: any) => setStatus(v)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Филтър по статус" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Events</SelectItem>
-            <SelectItem value="recognized">Recognized</SelectItem>
-            <SelectItem value="unknown">Unknown</SelectItem>
-            <SelectItem value="denied">Denied</SelectItem>
+            <SelectItem value="all">Всички събития</SelectItem>
+            <SelectItem value="recognized">Разпознати</SelectItem>
+            <SelectItem value="unknown">Непознати</SelectItem>
+            <SelectItem value="denied">Отказани</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -46,13 +46,13 @@ export default function RecognitionList() {
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className="w-[80px]">Snapshot</TableHead>
-              <TableHead>Timestamp</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead>Confidence</TableHead>
-              <TableHead>Camera</TableHead>
-              <TableHead>Zone</TableHead>
+              <TableHead className="w-[80px]">Снимка</TableHead>
+              <TableHead>Дата и час</TableHead>
+              <TableHead>Статус</TableHead>
+              <TableHead>Лице</TableHead>
+              <TableHead>Точност</TableHead>
+              <TableHead>Камера</TableHead>
+              <TableHead>Зона</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -81,7 +81,7 @@ export default function RecognitionList() {
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md">
                           <DialogHeader>
-                            <DialogTitle>Event Snapshot</DialogTitle>
+                            <DialogTitle>Снимка от събитие</DialogTitle>
                           </DialogHeader>
                           <div className="mt-2 aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center border border-border">
                             <img src={event.snapshotUrl} alt="full snapshot" className="w-full h-full object-contain" />
@@ -95,7 +95,7 @@ export default function RecognitionList() {
                     )}
                   </TableCell>
                   <TableCell className="font-mono text-xs whitespace-nowrap text-muted-foreground">
-                    {new Date(event.detectedAt).toLocaleString()}
+                    {new Date(event.detectedAt).toLocaleString('bg-BG')}
                   </TableCell>
                   <TableCell>
                     <EventBadge status={event.status} />
@@ -107,7 +107,7 @@ export default function RecognitionList() {
                         <span className="font-mono text-xs text-muted-foreground">{event.employeeNumber}</span>
                       </div>
                     ) : (
-                      <span className="text-muted-foreground italic">Unknown</span>
+                      <span className="text-muted-foreground italic">Непознато</span>
                     )}
                   </TableCell>
                   <TableCell className="font-mono text-xs">
@@ -120,7 +120,7 @@ export default function RecognitionList() {
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  No recognition events found.
+                  Няма намерени разпознавания.
                 </TableCell>
               </TableRow>
             )}
@@ -132,7 +132,7 @@ export default function RecognitionList() {
 }
 
 function EventBadge({ status }: { status: string }) {
-  if (status === 'recognized') return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">RECOGNIZED</Badge>;
-  if (status === 'denied') return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">DENIED</Badge>;
-  return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20">UNKNOWN</Badge>;
+  if (status === 'recognized') return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">РАЗПОЗНАТ</Badge>;
+  if (status === 'denied') return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">ОТКАЗАН</Badge>;
+  return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20">НЕПОЗНАТ</Badge>;
 }

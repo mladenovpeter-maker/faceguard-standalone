@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Activity, AlertTriangle, Users, Video, ShieldAlert, CheckCircle2, UserX } from "lucide-react";
+import { Activity, Users, Video, ShieldAlert, UserX } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetDashboardSummary, useGetRecentEvents, useGetHourlyActivity } from "@workspace/api-client-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
@@ -20,12 +18,12 @@ export default function Dashboard() {
           Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-md" />)
         ) : summary ? (
           <>
-            <StatCard title="Active Personnel" value={summary.activeEmployees.toString()} total={summary.totalEmployees.toString()} icon={Users} />
-            <StatCard title="Today's Presence" value={summary.todayPresent.toString()} subtitle="Recognized individuals" icon={Activity} />
-            <StatCard title="Cameras Online" value={summary.onlineCameras.toString()} total={summary.totalCameras.toString()} icon={Video} 
+            <StatCard title="Активен персонал" value={summary.activeEmployees.toString()} total={summary.totalEmployees.toString()} icon={Users} />
+            <StatCard title="Присъствие днес" value={summary.todayPresent.toString()} subtitle="Разпознати лица" icon={Activity} />
+            <StatCard title="Камери онлайн" value={summary.onlineCameras.toString()} total={summary.totalCameras.toString()} icon={Video}
               alert={summary.onlineCameras < summary.totalCameras} />
-            <StatCard title="Security Alerts" value={(summary.unknownToday + summary.deniedToday).toString()} 
-              subtitle={`${summary.deniedToday} denied, ${summary.unknownToday} unknown`} 
+            <StatCard title="Сигнали за сигурност" value={(summary.unknownToday + summary.deniedToday).toString()}
+              subtitle={`${summary.deniedToday} отказани, ${summary.unknownToday} непознати`}
               icon={ShieldAlert} alert={(summary.unknownToday + summary.deniedToday) > 0} />
           </>
         ) : null}
@@ -34,7 +32,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="col-span-1 lg:col-span-2 border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-sm font-medium uppercase tracking-wider font-mono text-muted-foreground">Hourly Activity</CardTitle>
+            <CardTitle className="text-sm font-medium uppercase tracking-wider font-mono text-muted-foreground">Почасова активност</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
@@ -46,14 +44,14 @@ export default function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                     <XAxis dataKey="hour" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `${v}:00`} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <RechartsTooltip 
+                    <RechartsTooltip
                       contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}
                       itemStyle={{ color: 'hsl(var(--foreground))' }}
                     />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Bar dataKey="recognized" stackId="a" fill="hsl(142 71% 45%)" name="Recognized" />
-                    <Bar dataKey="unknown" stackId="a" fill="hsl(38 92% 50%)" name="Unknown" />
-                    <Bar dataKey="denied" stackId="a" fill="hsl(0 84% 60%)" name="Denied" />
+                    <Bar dataKey="recognized" stackId="a" fill="hsl(142 71% 45%)" name="Разпознати" />
+                    <Bar dataKey="unknown" stackId="a" fill="hsl(38 92% 50%)" name="Непознати" />
+                    <Bar dataKey="denied" stackId="a" fill="hsl(0 84% 60%)" name="Отказани" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : null}
@@ -63,7 +61,7 @@ export default function Dashboard() {
 
         <Card className="col-span-1 border-border bg-card flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium uppercase tracking-wider font-mono text-muted-foreground">Live Feed</CardTitle>
+            <CardTitle className="text-sm font-medium uppercase tracking-wider font-mono text-muted-foreground">На живо</CardTitle>
             <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
           </CardHeader>
           <CardContent className="flex-1 overflow-auto p-0">
@@ -85,20 +83,20 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-1">
                         <p className="text-sm font-medium truncate">
-                          {event.status === 'recognized' ? event.employeeName : 'Unknown Individual'}
+                          {event.status === 'recognized' ? event.employeeName : 'Непознато лице'}
                         </p>
                         <EventBadge status={event.status} />
                       </div>
                       <div className="flex justify-between items-center text-xs text-muted-foreground font-mono">
                         <span className="truncate mr-2">{event.cameraName} • {event.zoneName}</span>
-                        <span>{new Date(event.detectedAt).toLocaleTimeString()}</span>
+                        <span>{new Date(event.detectedAt).toLocaleTimeString('bg-BG')}</span>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-8 text-center text-muted-foreground text-sm">No recent events</div>
+              <div className="p-8 text-center text-muted-foreground text-sm">Няма скорошни събития</div>
             )}
           </CardContent>
         </Card>
@@ -121,7 +119,7 @@ function StatCard({ title, value, subtitle, total, icon: Icon, alert = false }: 
         </div>
         {(subtitle || alert) && (
           <p className={`text-xs mt-1 ${alert ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-            {subtitle || 'System Alert'}
+            {subtitle || 'Системен сигнал'}
           </p>
         )}
       </CardContent>
@@ -130,7 +128,7 @@ function StatCard({ title, value, subtitle, total, icon: Icon, alert = false }: 
 }
 
 function EventBadge({ status }: { status: string }) {
-  if (status === 'recognized') return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">Authorized</Badge>;
-  if (status === 'denied') return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">Denied</Badge>;
-  return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20">Unknown</Badge>;
+  if (status === 'recognized') return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">Разрешен</Badge>;
+  if (status === 'denied') return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">Отказан</Badge>;
+  return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20">Непознат</Badge>;
 }

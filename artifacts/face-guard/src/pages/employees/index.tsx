@@ -15,10 +15,10 @@ export default function EmployeeList() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Personnel Registry</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Регистър на персонала</h1>
         <Link href="/employees/new">
           <Button className="font-mono text-xs uppercase tracking-wider">
-            <Plus className="mr-2 h-4 w-4" /> Register Employee
+            <Plus className="mr-2 h-4 w-4" /> Регистрирай служител
           </Button>
         </Link>
       </div>
@@ -26,8 +26,8 @@ export default function EmployeeList() {
       <div className="flex flex-col sm:flex-row gap-4 items-center bg-card p-4 rounded-lg border border-border">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search by name, ID, or department..." 
+          <Input
+            placeholder="Търсене по име, номер или отдел..."
             className="pl-9 font-mono bg-background"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -39,12 +39,12 @@ export default function EmployeeList() {
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className="w-[80px]">Photo</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Employee ID</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Position</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="w-[80px]">Снимка</TableHead>
+              <TableHead>Име</TableHead>
+              <TableHead>Служебен №</TableHead>
+              <TableHead>Отдел</TableHead>
+              <TableHead>Длъжност</TableHead>
+              <TableHead>Статус</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -77,7 +77,7 @@ export default function EmployeeList() {
                   <TableCell>{employee.position}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={employee.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-muted text-muted-foreground'}>
-                      {employee.status}
+                      {employee.status === 'active' ? 'Активен' : 'Неактивен'}
                     </Badge>
                   </TableCell>
                 </TableRow>
@@ -85,7 +85,7 @@ export default function EmployeeList() {
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                  No personnel found.
+                  Няма намерен персонал.
                 </TableCell>
               </TableRow>
             )}

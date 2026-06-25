@@ -16,7 +16,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const zoneSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "Наименованието е задължително"),
   description: z.string().optional(),
   accessLevel: z.enum(["public", "restricted", "secure"]),
 });
@@ -40,13 +40,13 @@ export default function ZoneList() {
   function onSubmit(values: z.infer<typeof zoneSchema>) {
     createZone.mutate({ data: values }, {
       onSuccess: () => {
-        toast({ title: "Zone created successfully" });
+        toast({ title: "Зоната е създадена успешно" });
         queryClient.invalidateQueries({ queryKey: getListZonesQueryKey() });
         setOpen(false);
         form.reset();
       },
       onError: (err: any) => {
-        toast({ title: "Error creating zone", description: err.message, variant: "destructive" });
+        toast({ title: "Грешка при създаване на зона", description: err.message, variant: "destructive" });
       }
     });
   }
@@ -54,16 +54,16 @@ export default function ZoneList() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Zones</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Зони</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="font-mono text-xs uppercase tracking-wider">
-              <Plus className="mr-2 h-4 w-4" /> Add Zone
+              <Plus className="mr-2 h-4 w-4" /> Добави зона
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New Zone</DialogTitle>
+              <DialogTitle>Създаване на нова зона</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
@@ -72,9 +72,9 @@ export default function ZoneList() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Zone Name</FormLabel>
+                      <FormLabel>Наименование на зоната</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. Main Server Room" {...field} />
+                        <Input placeholder="напр. Сървърна зала" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -85,9 +85,9 @@ export default function ZoneList() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormLabel>Описание (незадължително)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Brief description of the area" {...field} />
+                        <Input placeholder="Кратко описание на помещението" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -98,17 +98,17 @@ export default function ZoneList() {
                   name="accessLevel"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Access Level</FormLabel>
+                      <FormLabel>Ниво на достъп</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select level" />
+                            <SelectValue placeholder="Избери ниво" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="public">Public</SelectItem>
-                          <SelectItem value="restricted">Restricted</SelectItem>
-                          <SelectItem value="secure">Secure</SelectItem>
+                          <SelectItem value="public">Публичен</SelectItem>
+                          <SelectItem value="restricted">Ограничен</SelectItem>
+                          <SelectItem value="secure">Сигурен</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -116,7 +116,7 @@ export default function ZoneList() {
                   )}
                 />
                 <Button type="submit" className="w-full" disabled={createZone.isPending}>
-                  {createZone.isPending ? "Creating..." : "Create Zone"}
+                  {createZone.isPending ? "Създаване..." : "Създай зона"}
                 </Button>
               </form>
             </Form>
@@ -128,10 +128,10 @@ export default function ZoneList() {
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Access Level</TableHead>
-              <TableHead className="text-right">Cameras</TableHead>
+              <TableHead>Наименование</TableHead>
+              <TableHead>Описание</TableHead>
+              <TableHead>Ниво на достъп</TableHead>
+              <TableHead className="text-right">Камери</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -157,7 +157,7 @@ export default function ZoneList() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">No zones configured.</TableCell>
+                <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">Няма конфигурирани зони.</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -168,7 +168,7 @@ export default function ZoneList() {
 }
 
 function AccessLevelBadge({ level }: { level: string }) {
-  if (level === 'public') return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20"><ShieldCheck className="h-3 w-3 mr-1"/> PUBLIC</Badge>;
-  if (level === 'secure') return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20"><ShieldAlert className="h-3 w-3 mr-1"/> SECURE</Badge>;
-  return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20"><Shield className="h-3 w-3 mr-1"/> RESTRICTED</Badge>;
+  if (level === 'public') return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20"><ShieldCheck className="h-3 w-3 mr-1"/> ПУБЛИЧЕН</Badge>;
+  if (level === 'secure') return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20"><ShieldAlert className="h-3 w-3 mr-1"/> СИГУРЕН</Badge>;
+  return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20"><Shield className="h-3 w-3 mr-1"/> ОГРАНИЧЕН</Badge>;
 }

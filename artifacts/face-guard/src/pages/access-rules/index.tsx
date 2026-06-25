@@ -1,6 +1,6 @@
 import { useListAccessRules, useCreateAccessRule, useDeleteAccessRule, getListAccessRulesQueryKey, useListEmployees, useListZones } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ShieldCheck, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,15 +14,15 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const ruleSchema = z.object({
-  employeeId: z.coerce.number().min(1, "Select an employee"),
-  zoneId: z.coerce.number().min(1, "Select a zone"),
+  employeeId: z.coerce.number().min(1, "Изберете служител"),
+  zoneId: z.coerce.number().min(1, "Изберете зона"),
 });
 
 export default function AccessRulesList() {
   const { data: rules, isLoading } = useListAccessRules();
   const { data: employees } = useListEmployees();
   const { data: zones } = useListZones();
-  
+
   const createRule = useCreateAccessRule();
   const deleteRule = useDeleteAccessRule();
   const queryClient = useQueryClient();
@@ -36,22 +36,22 @@ export default function AccessRulesList() {
   function onSubmit(values: z.infer<typeof ruleSchema>) {
     createRule.mutate({ data: values }, {
       onSuccess: () => {
-        toast({ title: "Access rule added" });
+        toast({ title: "Правото за достъп е добавено" });
         queryClient.invalidateQueries({ queryKey: getListAccessRulesQueryKey() });
         setOpen(false);
         form.reset();
       },
       onError: (err: any) => {
-        toast({ title: "Error", description: err.message, variant: "destructive" });
+        toast({ title: "Грешка", description: err.message, variant: "destructive" });
       }
     });
   }
 
   function handleDelete(id: number) {
-    if (!confirm("Remove this access rule?")) return;
+    if (!confirm("Премахване на това право за достъп?")) return;
     deleteRule.mutate({ id }, {
       onSuccess: () => {
-        toast({ title: "Rule removed" });
+        toast({ title: "Правото е премахнато" });
         queryClient.invalidateQueries({ queryKey: getListAccessRulesQueryKey() });
       }
     });
@@ -60,16 +60,16 @@ export default function AccessRulesList() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Access Rules</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Права за достъп</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="font-mono text-xs uppercase tracking-wider">
-              <Plus className="mr-2 h-4 w-4" /> Grant Access
+              <Plus className="mr-2 h-4 w-4" /> Даване на достъп
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Grant Zone Access</DialogTitle>
+              <DialogTitle>Даване на достъп до зона</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
@@ -78,11 +78,11 @@ export default function AccessRulesList() {
                   name="employeeId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Employee</FormLabel>
+                      <FormLabel>Служител</FormLabel>
                       <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value?.toString()}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select employee" />
+                            <SelectValue placeholder="Избери служител" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -102,11 +102,11 @@ export default function AccessRulesList() {
                   name="zoneId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Zone</FormLabel>
+                      <FormLabel>Зона</FormLabel>
                       <Select onValueChange={(val) => field.onChange(Number(val))} value={field.value?.toString()}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select zone" />
+                            <SelectValue placeholder="Избери зона" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -122,7 +122,7 @@ export default function AccessRulesList() {
                   )}
                 />
                 <Button type="submit" className="w-full" disabled={createRule.isPending}>
-                  {createRule.isPending ? "Saving..." : "Grant Access"}
+                  {createRule.isPending ? "Запазване..." : "Дай достъп"}
                 </Button>
               </form>
             </Form>
@@ -134,11 +134,11 @@ export default function AccessRulesList() {
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead>Employee</TableHead>
-              <TableHead>ID Number</TableHead>
-              <TableHead>Zone</TableHead>
-              <TableHead>Granted At</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Служител</TableHead>
+              <TableHead>Служебен №</TableHead>
+              <TableHead>Зона</TableHead>
+              <TableHead>Дата на предоставяне</TableHead>
+              <TableHead className="text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -153,7 +153,7 @@ export default function AccessRulesList() {
                   <TableCell className="font-mono text-xs text-muted-foreground">{rule.employeeNumber}</TableCell>
                   <TableCell>{rule.zoneName}</TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">
-                    {new Date(rule.createdAt).toLocaleDateString()}
+                    {new Date(rule.createdAt).toLocaleDateString('bg-BG')}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleDelete(rule.id)} className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
@@ -164,7 +164,7 @@ export default function AccessRulesList() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No access rules configured.</TableCell>
+                <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Няма конфигурирани права за достъп.</TableCell>
               </TableRow>
             )}
           </TableBody>

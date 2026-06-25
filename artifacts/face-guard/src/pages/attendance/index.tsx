@@ -1,5 +1,5 @@
 import { useGetTodayAttendance } from "@workspace/api-client-react";
-import { Clock, User } from "lucide-react";
+import { User } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,16 +10,16 @@ export default function AttendanceList() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Today's Attendance</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Присъствие днес</h1>
         <div className="font-mono text-sm text-muted-foreground">
-          {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          {new Date().toLocaleDateString('bg-BG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-border bg-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Present Today</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Присъстващи</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono text-green-500">
@@ -29,7 +29,7 @@ export default function AttendanceList() {
         </Card>
         <Card className="border-border bg-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Absent</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Отсъстващи</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono text-red-500">
@@ -39,7 +39,7 @@ export default function AttendanceList() {
         </Card>
         <Card className="border-border bg-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Workforce</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Общо персонал</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono">
@@ -54,11 +54,11 @@ export default function AttendanceList() {
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead className="w-[60px]"></TableHead>
-              <TableHead>Employee</TableHead>
-              <TableHead>First Seen</TableHead>
-              <TableHead>Last Seen</TableHead>
-              <TableHead>Current/Last Zone</TableHead>
-              <TableHead className="text-right">Total Duration</TableHead>
+              <TableHead>Служител</TableHead>
+              <TableHead>Първо засичане</TableHead>
+              <TableHead>Последно засичане</TableHead>
+              <TableHead>Текуща/последна зона</TableHead>
+              <TableHead className="text-right">Обща продължителност</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -79,7 +79,7 @@ export default function AttendanceList() {
                   <TableCell>
                     <div className="h-8 w-8 rounded-full bg-muted border border-border overflow-hidden flex items-center justify-center">
                       {record.employeePhotoUrl ? (
-                        <img src={record.employeePhotoUrl} alt="photo" className="h-full w-full object-cover" />
+                        <img src={record.employeePhotoUrl} alt="снимка" className="h-full w-full object-cover" />
                       ) : (
                         <User className="h-4 w-4 text-muted-foreground" />
                       )}
@@ -90,21 +90,21 @@ export default function AttendanceList() {
                     <div className="text-xs text-muted-foreground font-mono">{record.employeeNumber}</div>
                   </TableCell>
                   <TableCell className="font-mono text-sm">
-                    {new Date(record.firstSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(record.firstSeen).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })}
                   </TableCell>
                   <TableCell className="font-mono text-sm">
-                    {new Date(record.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(record.lastSeen).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{record.zoneName || '-'}</TableCell>
                   <TableCell className="text-right font-mono font-medium">
-                    {record.totalMinutes ? `${Math.floor(record.totalMinutes / 60)}h ${record.totalMinutes % 60}m` : '-'}
+                    {record.totalMinutes ? `${Math.floor(record.totalMinutes / 60)}ч ${record.totalMinutes % 60}м` : '-'}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                  No attendance records for today.
+                  Няма записи за присъствие днес.
                 </TableCell>
               </TableRow>
             )}

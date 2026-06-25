@@ -6,15 +6,15 @@ import { useHealthCheck } from "@workspace/api-client-react";
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { data: health } = useHealthCheck();
-  
+
   const navItems = [
-    { href: "/", label: "Dashboard", icon: Activity },
-    { href: "/recognitions", label: "Event Log", icon: MonitorPlay },
-    { href: "/employees", label: "Personnel", icon: Users },
-    { href: "/attendance", label: "Attendance", icon: Clock },
-    { href: "/access-rules", label: "Access Control", icon: ShieldCheck },
-    { href: "/cameras", label: "Cameras", icon: Video },
-    { href: "/zones", label: "Zones", icon: Map },
+    { href: "/", label: "Табло", icon: Activity },
+    { href: "/recognitions", label: "Лог на събития", icon: MonitorPlay },
+    { href: "/employees", label: "Персонал", icon: Users },
+    { href: "/attendance", label: "Присъствие", icon: Clock },
+    { href: "/access-rules", label: "Контрол на достъп", icon: ShieldCheck },
+    { href: "/cameras", label: "Камери", icon: Video },
+    { href: "/zones", label: "Зони", icon: Map },
   ];
 
   return (
@@ -27,7 +27,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           <div className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2 px-3">
-            Core Modules
+            Основни модули
           </div>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -36,8 +36,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Link key={item.href} href={item.href}>
                 <div className={cn(
                   "flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors",
-                  isActive 
-                    ? "bg-primary/10 text-primary" 
+                  isActive
+                    ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 )}>
                   <Icon className="h-4 w-4 mr-3" />
@@ -49,10 +49,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="p-4 border-t border-border bg-card/50">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground font-mono">SYSTEM STATUS</span>
+            <span className="text-muted-foreground font-mono">СТАТУС НА СИСТЕМАТА</span>
             <div className="flex items-center gap-1.5">
               <span className={cn("h-2 w-2 rounded-full", health?.status === "ok" ? "bg-green-500" : "bg-red-500")} />
-              <span className="font-mono font-medium">{health?.status === "ok" ? "ONLINE" : "OFFLINE"}</span>
+              <span className="font-mono font-medium">{health?.status === "ok" ? "ОНЛАЙН" : "ОФЛАЙН"}</span>
             </div>
           </div>
         </div>
@@ -62,11 +62,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-8 shrink-0 justify-between">
           <h2 className="text-lg font-medium text-foreground capitalize tracking-wide">
-            {navItems.find(i => location === i.href || (i.href !== "/" && location.startsWith(i.href)))?.label || "Overview"}
+            {navItems.find(i => location === i.href || (i.href !== "/" && location.startsWith(i.href)))?.label || "Преглед"}
           </h2>
           <div className="flex items-center gap-4 text-sm font-mono text-muted-foreground">
             <span>{new Date().toISOString().split('T')[0]}</span>
-            <span>SYS_ADMIN</span>
+            <span>СИС_АДМИНИСТРАТОР</span>
           </div>
         </header>
         <div className="flex-1 overflow-y-auto p-8">

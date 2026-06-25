@@ -14,15 +14,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useListZones } from "@workspace/api-client-react";
 
 const cameraSchema = z.object({
-  name: z.string().min(1, "Required"),
+  name: z.string().min(1, "Задължително"),
   brand: z.enum(["dahua", "hikvision", "unv", "other"]),
   protocol: z.enum(["rtsp", "http", "https"]),
-  host: z.string().min(1, "Required"),
+  host: z.string().min(1, "Задължително"),
   port: z.coerce.number().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
   streamPath: z.string().optional(),
-  zoneId: z.coerce.number().min(1, "Required"),
+  zoneId: z.coerce.number().min(1, "Задължително"),
 });
 
 export default function CameraNew() {
@@ -49,11 +49,11 @@ export default function CameraNew() {
   async function onSubmit(values: z.infer<typeof cameraSchema>) {
     try {
       await createCamera.mutateAsync({ data: values });
-      toast({ title: "Camera added successfully" });
+      toast({ title: "Камерата е добавена успешно" });
       queryClient.invalidateQueries({ queryKey: getListCamerasQueryKey() });
       setLocation("/cameras");
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Грешка", description: err.message, variant: "destructive" });
     }
   }
 
@@ -63,7 +63,7 @@ export default function CameraNew() {
         <Button variant="ghost" size="icon" onClick={() => setLocation("/cameras")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Add Camera</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Добавяне на камера</h1>
       </div>
 
       <Form {...form}>
@@ -71,30 +71,30 @@ export default function CameraNew() {
           <Card className="border-border bg-card">
             <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem className="sm:col-span-2"><FormLabel>Camera Name</FormLabel><FormControl><Input placeholder="e.g. Front Door" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem className="sm:col-span-2"><FormLabel>Наименование на камерата</FormLabel><FormControl><Input placeholder="напр. Главен вход" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              
+
               <FormField control={form.control} name="brand" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Brand</FormLabel>
+                  <FormLabel>Марка</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
                       <SelectItem value="dahua">Dahua</SelectItem>
                       <SelectItem value="hikvision">Hikvision</SelectItem>
                       <SelectItem value="unv">UNV</SelectItem>
-                      <SelectItem value="other">Other/ONVIF</SelectItem>
+                      <SelectItem value="other">Друга/ONVIF</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )} />
-              
+
               <FormField control={form.control} name="zoneId" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Zone</FormLabel>
+                  <FormLabel>Зона</FormLabel>
                   <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value?.toString()}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select zone" /></SelectTrigger></FormControl>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Избери зона" /></SelectTrigger></FormControl>
                     <SelectContent>
                       {zones?.map(z => <SelectItem key={z.id} value={z.id.toString()}>{z.name}</SelectItem>)}
                     </SelectContent>
@@ -103,11 +103,13 @@ export default function CameraNew() {
                 </FormItem>
               )} />
 
-              <div className="sm:col-span-2 border-t border-border my-2 pt-4"><h3 className="text-sm font-medium text-muted-foreground">Connection Details</h3></div>
+              <div className="sm:col-span-2 border-t border-border my-2 pt-4">
+                <h3 className="text-sm font-medium text-muted-foreground">Данни за връзка</h3>
+              </div>
 
               <FormField control={form.control} name="protocol" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Protocol</FormLabel>
+                  <FormLabel>Протокол</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
@@ -121,32 +123,31 @@ export default function CameraNew() {
               )} />
 
               <FormField control={form.control} name="host" render={({ field }) => (
-                <FormItem><FormLabel>Host / IP Address</FormLabel><FormControl><Input className="font-mono" placeholder="192.168.1.100" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Адрес / IP</FormLabel><FormControl><Input className="font-mono" placeholder="192.168.1.100" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              
+
               <FormField control={form.control} name="port" render={({ field }) => (
-                <FormItem><FormLabel>Port</FormLabel><FormControl><Input type="number" className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Порт</FormLabel><FormControl><Input type="number" className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              
+
               <FormField control={form.control} name="streamPath" render={({ field }) => (
-                <FormItem><FormLabel>Stream Path</FormLabel><FormControl><Input className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Път на потока</FormLabel><FormControl><Input className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
 
               <FormField control={form.control} name="username" render={({ field }) => (
-                <FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              
-              <FormField control={form.control} name="password" render={({ field }) => (
-                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Потребителско име</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
 
+              <FormField control={form.control} name="password" render={({ field }) => (
+                <FormItem><FormLabel>Парола</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
             </CardContent>
           </Card>
 
           <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={() => setLocation("/cameras")}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => setLocation("/cameras")}>Отказ</Button>
             <Button type="submit" disabled={createCamera.isPending}>
-              {createCamera.isPending ? "Saving..." : "Add Camera"}
+              {createCamera.isPending ? "Запазване..." : "Добави камера"}
             </Button>
           </div>
         </form>
