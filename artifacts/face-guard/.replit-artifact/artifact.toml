@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "FaceGuard — Face Recognition Access & Attendance"
+version = "1.0.0"
+id = "artifacts/face-guard"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19344
+
+[services.development]
+run = "pnpm --filter @workspace/face-guard run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/face-guard", "run", "build" ]
+publicDir = "artifacts/face-guard/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19344"
+BASE_PATH = "/"

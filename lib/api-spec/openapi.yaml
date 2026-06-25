@@ -3,20 +3,34 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: FaceGuard - Face Recognition Access & Attendance System
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: employees
+    description: Employee management
+  - name: cameras
+    description: Camera management
+  - name: zones
+    description: Zone/room access management
+  - name: recognitions
+    description: Face recognition events
+  - name: attendance
+    description: Attendance records
+  - name: access-rules
+    description: Access control rules
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +38,516 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # EMPLOYEES
+  /employees:
+    get:
+      operationId: listEmployees
+      tags: [employees]
+      summary: List all employees
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: departmentId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, all]
+      responses:
+        "200":
+          description: List of employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Employee"
+    post:
+      operationId: createEmployee
+      tags: [employees]
+      summary: Register a new employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+  /employees/{id}:
+    get:
+      operationId: getEmployee
+      tags: [employees]
+      summary: Get employee by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateEmployee
+      tags: [employees]
+      summary: Update employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+    delete:
+      operationId: deleteEmployee
+      tags: [employees]
+      summary: Delete employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /employees/{id}/photo:
+    post:
+      operationId: uploadEmployeePhoto
+      tags: [employees]
+      summary: Upload employee face photo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PhotoUpload"
+      responses:
+        "200":
+          description: Photo uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+
+  # CAMERAS
+  /cameras:
+    get:
+      operationId: listCameras
+      tags: [cameras]
+      summary: List all cameras
+      responses:
+        "200":
+          description: List of cameras
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Camera"
+    post:
+      operationId: createCamera
+      tags: [cameras]
+      summary: Add a new camera
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CameraInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Camera"
+
+  /cameras/{id}:
+    get:
+      operationId: getCamera
+      tags: [cameras]
+      summary: Get camera by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Camera
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Camera"
+    patch:
+      operationId: updateCamera
+      tags: [cameras]
+      summary: Update camera
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CameraUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Camera"
+    delete:
+      operationId: deleteCamera
+      tags: [cameras]
+      summary: Delete camera
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /cameras/{id}/test:
+    post:
+      operationId: testCameraConnection
+      tags: [cameras]
+      summary: Test camera RTSP/HTTP connection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CameraTestResult"
+
+  # ZONES
+  /zones:
+    get:
+      operationId: listZones
+      tags: [zones]
+      summary: List all zones/rooms
+      responses:
+        "200":
+          description: List of zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Zone"
+    post:
+      operationId: createZone
+      tags: [zones]
+      summary: Create a zone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZoneInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Zone"
+
+  /zones/{id}:
+    patch:
+      operationId: updateZone
+      tags: [zones]
+      summary: Update zone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZoneUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Zone"
+    delete:
+      operationId: deleteZone
+      tags: [zones]
+      summary: Delete zone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ACCESS RULES
+  /access-rules:
+    get:
+      operationId: listAccessRules
+      tags: [access-rules]
+      summary: List access rules
+      responses:
+        "200":
+          description: Access rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccessRule"
+    post:
+      operationId: createAccessRule
+      tags: [access-rules]
+      summary: Create access rule (employee <-> zone permission)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccessRuleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessRule"
+
+  /access-rules/{id}:
+    delete:
+      operationId: deleteAccessRule
+      tags: [access-rules]
+      summary: Remove access rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # RECOGNITION EVENTS
+  /recognitions:
+    get:
+      operationId: listRecognitions
+      tags: [recognitions]
+      summary: List recognition events
+      parameters:
+        - name: employeeId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: cameraId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: zoneId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [recognized, unknown, denied, all]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Recognition events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RecognitionEvent"
+    post:
+      operationId: createRecognition
+      tags: [recognitions]
+      summary: Log a recognition event (called by camera integration)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecognitionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecognitionEvent"
+
+  # ATTENDANCE
+  /attendance:
+    get:
+      operationId: listAttendance
+      tags: [attendance]
+      summary: List attendance records
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: employeeId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: zoneId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Attendance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttendanceRecord"
+
+  /attendance/today:
+    get:
+      operationId: getTodayAttendance
+      tags: [attendance]
+      summary: Get today's attendance summary
+      responses:
+        "200":
+          description: Today's attendance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodayAttendance"
+
+  # DASHBOARD
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/recent-events:
+    get:
+      operationId: getRecentEvents
+      tags: [dashboard]
+      summary: Get recent recognition events (last 20)
+      responses:
+        "200":
+          description: Recent events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RecognitionEvent"
+
+  /dashboard/hourly-activity:
+    get:
+      operationId: getHourlyActivity
+      tags: [dashboard]
+      summary: Get hourly recognition activity for today
+      responses:
+        "200":
+          description: Hourly activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HourlyActivity"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +558,396 @@ components:
       required:
         - status
 
+    Employee:
+      type: object
+      required: [id, firstName, lastName, employeeNumber, department, position, status, createdAt]
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        employeeNumber:
+          type: string
+        department:
+          type: string
+        position:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive]
+        hiredAt:
+          type: ["string", "null"]
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    EmployeeInput:
+      type: object
+      required: [firstName, lastName, employeeNumber, department, position]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        employeeNumber:
+          type: string
+          minLength: 1
+        department:
+          type: string
+        position:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        hiredAt:
+          type: string
+          format: date
+
+    EmployeeUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        department:
+          type: string
+        position:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive]
+        hiredAt:
+          type: ["string", "null"]
+          format: date
+
+    PhotoUpload:
+      type: object
+      required: [photoBase64]
+      properties:
+        photoBase64:
+          type: string
+          description: Base64 encoded image
+
+    Camera:
+      type: object
+      required: [id, name, brand, protocol, host, zoneId, status, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        brand:
+          type: string
+          enum: [dahua, hikvision, unv, other]
+        protocol:
+          type: string
+          enum: [rtsp, http, https]
+        host:
+          type: string
+        port:
+          type: ["integer", "null"]
+        username:
+          type: ["string", "null"]
+        streamPath:
+          type: ["string", "null"]
+        zoneId:
+          type: integer
+        zoneName:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [online, offline, unknown]
+        createdAt:
+          type: string
+          format: date-time
+
+    CameraInput:
+      type: object
+      required: [name, brand, protocol, host, zoneId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        brand:
+          type: string
+          enum: [dahua, hikvision, unv, other]
+        protocol:
+          type: string
+          enum: [rtsp, http, https]
+        host:
+          type: string
+        port:
+          type: integer
+        username:
+          type: string
+        password:
+          type: string
+        streamPath:
+          type: string
+        zoneId:
+          type: integer
+
+    CameraUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        brand:
+          type: string
+          enum: [dahua, hikvision, unv, other]
+        protocol:
+          type: string
+          enum: [rtsp, http, https]
+        host:
+          type: string
+        port:
+          type: ["integer", "null"]
+        username:
+          type: ["string", "null"]
+        password:
+          type: ["string", "null"]
+        streamPath:
+          type: ["string", "null"]
+        zoneId:
+          type: integer
+        status:
+          type: string
+          enum: [online, offline, unknown]
+
+    CameraTestResult:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        latencyMs:
+          type: ["integer", "null"]
+
+    Zone:
+      type: object
+      required: [id, name, accessLevel, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        accessLevel:
+          type: string
+          enum: [public, restricted, secure]
+        cameraCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ZoneInput:
+      type: object
+      required: [name, accessLevel]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        accessLevel:
+          type: string
+          enum: [public, restricted, secure]
+
+    ZoneUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        accessLevel:
+          type: string
+          enum: [public, restricted, secure]
+
+    AccessRule:
+      type: object
+      required: [id, employeeId, zoneId, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: ["string", "null"]
+        employeeNumber:
+          type: ["string", "null"]
+        zoneId:
+          type: integer
+        zoneName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    AccessRuleInput:
+      type: object
+      required: [employeeId, zoneId]
+      properties:
+        employeeId:
+          type: integer
+        zoneId:
+          type: integer
+
+    RecognitionEvent:
+      type: object
+      required: [id, cameraId, status, confidence, detectedAt]
+      properties:
+        id:
+          type: integer
+        cameraId:
+          type: integer
+        cameraName:
+          type: ["string", "null"]
+        zoneId:
+          type: ["integer", "null"]
+        zoneName:
+          type: ["string", "null"]
+        employeeId:
+          type: ["integer", "null"]
+        employeeName:
+          type: ["string", "null"]
+        employeeNumber:
+          type: ["string", "null"]
+        employeePhotoUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [recognized, unknown, denied]
+        confidence:
+          type: number
+          description: Confidence score 0-1
+        snapshotUrl:
+          type: ["string", "null"]
+        detectedAt:
+          type: string
+          format: date-time
+
+    RecognitionInput:
+      type: object
+      required: [cameraId, status, confidence, detectedAt]
+      properties:
+        cameraId:
+          type: integer
+        employeeId:
+          type: ["integer", "null"]
+        status:
+          type: string
+          enum: [recognized, unknown, denied]
+        confidence:
+          type: number
+        snapshotUrl:
+          type: ["string", "null"]
+        detectedAt:
+          type: string
+          format: date-time
+
+    AttendanceRecord:
+      type: object
+      required: [id, employeeId, date, firstSeen, lastSeen]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: ["string", "null"]
+        employeeNumber:
+          type: ["string", "null"]
+        employeePhotoUrl:
+          type: ["string", "null"]
+        date:
+          type: string
+          format: date
+        firstSeen:
+          type: string
+          format: date-time
+        lastSeen:
+          type: string
+          format: date-time
+        zoneId:
+          type: ["integer", "null"]
+        zoneName:
+          type: ["string", "null"]
+        totalMinutes:
+          type: ["integer", "null"]
+
+    TodayAttendance:
+      type: object
+      required: [date, presentCount, absentCount, totalEmployees, records]
+      properties:
+        date:
+          type: string
+          format: date
+        presentCount:
+          type: integer
+        absentCount:
+          type: integer
+        totalEmployees:
+          type: integer
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttendanceRecord"
+
+    DashboardSummary:
+      type: object
+      required: [totalEmployees, activeEmployees, totalCameras, onlineCameras, totalZones, todayPresent, todayRecognitions, unknownToday, deniedToday]
+      properties:
+        totalEmployees:
+          type: integer
+        activeEmployees:
+          type: integer
+        totalCameras:
+          type: integer
+        onlineCameras:
+          type: integer
+        totalZones:
+          type: integer
+        todayPresent:
+          type: integer
+        todayRecognitions:
+          type: integer
+        unknownToday:
+          type: integer
+        deniedToday:
+          type: integer
+
+    HourlyActivity:
+      type: object
+      required: [hour, recognized, unknown, denied]
+      properties:
+        hour:
+          type: integer
+          description: Hour of day 0-23
+        recognized:
+          type: integer
+        unknown:
+          type: integer
+        denied:
+          type: integer

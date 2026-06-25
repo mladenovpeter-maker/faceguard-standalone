@@ -1,0 +1,97 @@
+import { useListEmployees } from "@workspace/api-client-react";
+import { Link } from "wouter";
+import { Plus, Search, User } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+
+export default function EmployeeList() {
+  const [search, setSearch] = useState("");
+  const { data: employees, isLoading } = useListEmployees({ search: search || undefined });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Personnel Registry</h1>
+        <Link href="/employees/new">
+          <Button className="font-mono text-xs uppercase tracking-wider">
+            <Plus className="mr-2 h-4 w-4" /> Register Employee
+          </Button>
+        </Link>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 items-center bg-card p-4 rounded-lg border border-border">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search by name, ID, or department..." 
+            className="pl-9 font-mono bg-background"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead className="w-[80px]">Photo</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Employee ID</TableHead>
+              <TableHead>Department</TableHead>
+              <TableHead>Position</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-10 w-10 rounded-md" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                </TableRow>
+              ))
+            ) : employees && employees.length > 0 ? (
+              employees.map((employee) => (
+                <TableRow key={employee.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => window.location.href = `/employees/${employee.id}`}>
+                  <TableCell>
+                    <div className="h-10 w-10 bg-muted rounded-md border border-border overflow-hidden flex items-center justify-center">
+                      {employee.photoUrl ? (
+                        <img src={employee.photoUrl} alt={employee.firstName} className="h-full w-full object-cover" />
+                      ) : (
+                        <User className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium">{employee.firstName} {employee.lastName}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{employee.employeeNumber}</TableCell>
+                  <TableCell>{employee.department}</TableCell>
+                  <TableCell>{employee.position}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={employee.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-muted text-muted-foreground'}>
+                      {employee.status}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  No personnel found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
