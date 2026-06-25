@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, gte, sql } from "drizzle-orm";
+import { eq, desc, gte, sql, and } from "drizzle-orm";
 import { db, employeesTable, camerasTable, zonesTable, recognitionEventsTable, attendanceTable } from "@workspace/db";
 import {
   GetDashboardSummaryResponse,
   GetRecentEventsResponse,
   GetHourlyActivityResponse,
+  GetDashboardPresenceResponse,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -107,6 +108,44 @@ router.get("/dashboard/hourly-activity", async (_req, res): Promise<void> => {
   }
 
   res.json(GetHourlyActivityResponse.parse(Object.values(hourMap)));
+});
+
+router.get("/dashboard/presence", async (_req, res): Promise<void> => {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const rows = await db
+    .select({
+      id: employeesTable.id,
+      firstName: employeesTable.firstName,
+      lastName: employeesTable.lastName,
+      employeeNumber: employeesTable.employeeNumber,
+      department: employeesTable.department,
+      position: employeesTable.position,
+      photoUrl: employeesTable.photoUrl,
+      status: employeesTable.status,
+      firstSeen: attendanceTable.firstSeen,
+      lastSeen: attendanceTable.lastSeen,
+      totalMinutes: attendanceTable.totalMinutes,
+    })
+    .from(employeesTable)
+    .leftJoin(
+      attendanceTable,
+      and(
+        eq(attendanceTable.employeeId, employeesTable.id),
+        eq(attendanceTable.date, today),
+      ),
+    )
+    .where(eq(employeesTable.status, "active"))
+    .orderBy(employeesTable.firstName);
+
+  const result = rows.map(r => ({
+    ...r,
+    present: r.firstSeen !== null,
+    firstSeen: r.firstSeen ? r.firstSeen.toISOString() : null,
+    lastSeen: r.lastSeen ? r.lastSeen.toISOString() : null,
+  }));
+
+  res.json(GetDashboardPresenceResponse.parse(result));
 });
 
 export default router;

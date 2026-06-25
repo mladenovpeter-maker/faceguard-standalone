@@ -31,6 +31,7 @@ import type {
   DashboardSummary,
   Employee,
   EmployeeInput,
+  EmployeePresence,
   EmployeeUpdate,
   GetAttendanceReportParams,
   HealthStatus,
@@ -2754,6 +2755,83 @@ export function useGetHourlyActivity<TData = Awaited<ReturnType<typeof getHourly
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetHourlyActivityQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetDashboardPresenceUrl = () => {
+
+
+
+
+  return `/api/dashboard/presence`
+}
+
+/**
+ * @summary Get today's presence status for all active employees
+ */
+export const getDashboardPresence = async ( options?: RequestInit): Promise<EmployeePresence[]> => {
+
+  return customFetch<EmployeePresence[]>(getGetDashboardPresenceUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDashboardPresenceQueryKey = () => {
+    return [
+    `/api/dashboard/presence`
+    ] as const;
+    }
+
+
+export const getGetDashboardPresenceQueryOptions = <TData = Awaited<ReturnType<typeof getDashboardPresence>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboardPresence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDashboardPresenceQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboardPresence>>> = ({ signal }) => getDashboardPresence({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDashboardPresence>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDashboardPresenceQueryResult = NonNullable<Awaited<ReturnType<typeof getDashboardPresence>>>
+export type GetDashboardPresenceQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get today's presence status for all active employees
+ */
+
+export function useGetDashboardPresence<TData = Awaited<ReturnType<typeof getDashboardPresence>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboardPresence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDashboardPresenceQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

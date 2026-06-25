@@ -761,6 +761,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/HourlyActivity"
 
+  /dashboard/presence:
+    get:
+      operationId: getDashboardPresence
+      tags: [dashboard]
+      summary: Get today's presence status for all active employees
+      responses:
+        "200":
+          description: Employee presence list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeePresence"
+
 components:
   schemas:
     HealthStatus:
@@ -1361,3 +1376,34 @@ components:
           type: integer
         denied:
           type: integer
+
+    EmployeePresence:
+      type: object
+      required: [id, firstName, lastName, employeeNumber, department, position, status, present]
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        employeeNumber:
+          type: string
+        department:
+          type: string
+        position:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+        present:
+          type: boolean
+        firstSeen:
+          type: ["string", "null"]
+          format: date-time
+        lastSeen:
+          type: ["string", "null"]
+          format: date-time
+        totalMinutes:
+          type: ["integer", "null"]

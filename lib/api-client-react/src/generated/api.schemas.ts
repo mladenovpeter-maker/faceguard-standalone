@@ -566,6 +566,25 @@ export interface HourlyActivity {
   denied: number;
 }
 
+export interface EmployeePresence {
+  id: number;
+  firstName: string;
+  lastName: string;
+  employeeNumber: string;
+  department: string;
+  position: string;
+  /** @nullable */
+  photoUrl?: string | null;
+  status: string;
+  present: boolean;
+  /** @nullable */
+  firstSeen?: string | null;
+  /** @nullable */
+  lastSeen?: string | null;
+  /** @nullable */
+  totalMinutes?: number | null;
+}
+
 export type ListEmployeesParams = {
 search?: string;
 /**

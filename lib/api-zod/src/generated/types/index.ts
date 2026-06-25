@@ -28,6 +28,7 @@ export * from './cameraUpdateStatus';
 export * from './dashboardSummary';
 export * from './employee';
 export * from './employeeInput';
+export * from './employeePresence';
 export * from './employeeStatus';
 export * from './employeeUpdate';
 export * from './employeeUpdateStatus';

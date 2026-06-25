@@ -821,3 +821,23 @@ export const GetHourlyActivityResponseItem = zod.object({
 export const GetHourlyActivityResponse = zod.array(GetHourlyActivityResponseItem)
 
 
+/**
+ * @summary Get today's presence status for all active employees
+ */
+export const GetDashboardPresenceResponseItem = zod.object({
+  "id": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "employeeNumber": zod.string(),
+  "department": zod.string(),
+  "position": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "present": zod.boolean(),
+  "firstSeen": zod.coerce.date().nullish(),
+  "lastSeen": zod.coerce.date().nullish(),
+  "totalMinutes": zod.number().nullish()
+})
+export const GetDashboardPresenceResponse = zod.array(GetDashboardPresenceResponseItem)
+
+
