@@ -1,12 +1,13 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
-import { db, recognitionEventsTable, camerasTable, zonesTable, employeesTable } from "@workspace/db";
+import { eq, desc, and, gte, lte, sql, isNotNull } from "drizzle-orm";
+import { db, recognitionEventsTable, camerasTable, zonesTable, employeesTable, employeePhotosTable } from "@workspace/db";
 import {
   ListRecognitionsQueryParams,
   CreateRecognitionBody,
   ListRecognitionsResponse,
   CreateRecognitionResponse,
 } from "@workspace/api-zod";
+import { computeFaceDescriptor, matchDescriptor, type FaceCandidate } from "../lib/face-recognition";
 
 const router: IRouter = Router();
 
@@ -65,11 +66,48 @@ router.post("/recognitions", async (req, res): Promise<void> => {
     return;
   }
 
+  let status = parsed.data.status;
+  let employeeId = parsed.data.employeeId ?? null;
+  let confidence = parsed.data.confidence;
+
+  // Internal AI fallback: only runs when the camera itself failed to recognize the
+  // person (status "unknown") and a snapshot was supplied. If the camera already
+  // recognized or denied the person, we trust it and skip AI matching entirely
+  // to avoid unnecessary compute.
+  if (status === "unknown" && parsed.data.snapshotBase64) {
+    try {
+      const base64Data = parsed.data.snapshotBase64.replace(/^data:image\/\w+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
+      const descriptor = await computeFaceDescriptor(buffer);
+
+      if (descriptor) {
+        const photos = await db
+          .select({ employeeId: employeePhotosTable.employeeId, faceDescriptor: employeePhotosTable.faceDescriptor })
+          .from(employeePhotosTable)
+          .where(isNotNull(employeePhotosTable.faceDescriptor));
+
+        const candidates: FaceCandidate[] = photos
+          .filter((p) => p.faceDescriptor)
+          .map((p) => ({ employeeId: p.employeeId, descriptor: p.faceDescriptor as number[] }));
+
+        const match = matchDescriptor(descriptor, candidates);
+        if (match) {
+          status = "recognized";
+          employeeId = match.employeeId;
+          confidence = match.confidence / 100;
+          req.log.info({ employeeId, distance: match.distance }, "Internal AI fallback matched a face");
+        }
+      }
+    } catch (err) {
+      req.log.warn({ err }, "Internal AI fallback matching failed");
+    }
+  }
+
   const [event] = await db.insert(recognitionEventsTable).values({
     cameraId: parsed.data.cameraId,
-    employeeId: parsed.data.employeeId ?? null,
-    status: parsed.data.status,
-    confidence: parsed.data.confidence,
+    employeeId,
+    status,
+    confidence,
     snapshotUrl: parsed.data.snapshotUrl ?? null,
     detectedAt: new Date(parsed.data.detectedAt),
   }).returning();

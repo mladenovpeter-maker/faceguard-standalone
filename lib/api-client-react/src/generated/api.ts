@@ -35,6 +35,7 @@ import type {
   DepartmentWorkScheduleInput,
   Employee,
   EmployeeInput,
+  EmployeePhoto,
   EmployeePresence,
   EmployeeUpdate,
   GetAttendanceReportParams,
@@ -604,6 +605,226 @@ export const useUploadEmployeePhoto = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUploadEmployeePhotoMutationOptions(options));
+    }
+
+export const getListEmployeePhotosUrl = (id: number,) => {
+
+
+
+
+  return `/api/employees/${id}/photos`
+}
+
+/**
+ * @summary List all enrolled photos for an employee
+ */
+export const listEmployeePhotos = async (id: number, options?: RequestInit): Promise<EmployeePhoto[]> => {
+
+  return customFetch<EmployeePhoto[]>(getListEmployeePhotosUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEmployeePhotosQueryKey = (id: number,) => {
+    return [
+    `/api/employees/${id}/photos`
+    ] as const;
+    }
+
+
+export const getListEmployeePhotosQueryOptions = <TData = Awaited<ReturnType<typeof listEmployeePhotos>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEmployeePhotos>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEmployeePhotosQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEmployeePhotos>>> = ({ signal }) => listEmployeePhotos(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEmployeePhotos>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEmployeePhotosQueryResult = NonNullable<Awaited<ReturnType<typeof listEmployeePhotos>>>
+export type ListEmployeePhotosQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all enrolled photos for an employee
+ */
+
+export function useListEmployeePhotos<TData = Awaited<ReturnType<typeof listEmployeePhotos>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEmployeePhotos>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEmployeePhotosQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAddEmployeePhotoUrl = (id: number,) => {
+
+
+
+
+  return `/api/employees/${id}/photos`
+}
+
+/**
+ * @summary Add an enrollment photo for an employee (max 5). Computes an internal AI face descriptor used as a fallback when the camera itself cannot recognize the person.
+ */
+export const addEmployeePhoto = async (id: number,
+    photoUpload: PhotoUpload, options?: RequestInit): Promise<EmployeePhoto> => {
+
+  return customFetch<EmployeePhoto>(getAddEmployeePhotoUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(photoUpload)
+  }
+);}
+
+
+
+
+export const getAddEmployeePhotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addEmployeePhoto>>, TError,{id: number;data: BodyType<PhotoUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addEmployeePhoto>>, TError,{id: number;data: BodyType<PhotoUpload>}, TContext> => {
+
+const mutationKey = ['addEmployeePhoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addEmployeePhoto>>, {id: number;data: BodyType<PhotoUpload>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  addEmployeePhoto(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddEmployeePhotoMutationResult = NonNullable<Awaited<ReturnType<typeof addEmployeePhoto>>>
+    export type AddEmployeePhotoMutationBody = BodyType<PhotoUpload>
+    export type AddEmployeePhotoMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add an enrollment photo for an employee (max 5). Computes an internal AI face descriptor used as a fallback when the camera itself cannot recognize the person.
+ */
+export const useAddEmployeePhoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addEmployeePhoto>>, TError,{id: number;data: BodyType<PhotoUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addEmployeePhoto>>,
+        TError,
+        {id: number;data: BodyType<PhotoUpload>},
+        TContext
+      > => {
+      return useMutation(getAddEmployeePhotoMutationOptions(options));
+    }
+
+export const getDeleteEmployeePhotoUrl = (id: number,
+    photoId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/photos/${photoId}`
+}
+
+/**
+ * @summary Remove an enrolled photo
+ */
+export const deleteEmployeePhoto = async (id: number,
+    photoId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteEmployeePhotoUrl(id,photoId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteEmployeePhotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeePhoto>>, TError,{id: number;photoId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeePhoto>>, TError,{id: number;photoId: number}, TContext> => {
+
+const mutationKey = ['deleteEmployeePhoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteEmployeePhoto>>, {id: number;photoId: number}> = (props) => {
+          const {id,photoId} = props ?? {};
+
+          return  deleteEmployeePhoto(id,photoId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteEmployeePhotoMutationResult = NonNullable<Awaited<ReturnType<typeof deleteEmployeePhoto>>>
+
+    export type DeleteEmployeePhotoMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove an enrolled photo
+ */
+export const useDeleteEmployeePhoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeePhoto>>, TError,{id: number;photoId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteEmployeePhoto>>,
+        TError,
+        {id: number;photoId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteEmployeePhotoMutationOptions(options));
     }
 
 export const getListCamerasUrl = () => {

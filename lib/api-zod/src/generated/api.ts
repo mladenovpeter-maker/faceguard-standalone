@@ -179,6 +179,54 @@ export const UploadEmployeePhotoResponse = zod.object({
 
 
 /**
+ * @summary List all enrolled photos for an employee
+ */
+export const ListEmployeePhotosParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListEmployeePhotosResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "photoUrl": zod.string(),
+  "hasFaceDescriptor": zod.boolean().describe('Whether a face was detected and an internal AI descriptor stored for this photo'),
+  "createdAt": zod.coerce.date()
+})
+export const ListEmployeePhotosResponse = zod.array(ListEmployeePhotosResponseItem)
+
+
+/**
+ * @summary Add an enrollment photo for an employee (max 5). Computes an internal AI face descriptor used as a fallback when the camera itself cannot recognize the person.
+ */
+export const AddEmployeePhotoParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddEmployeePhotoBody = zod.object({
+  "photoBase64": zod.string().describe('Base64 encoded image')
+})
+
+export const AddEmployeePhotoResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "photoUrl": zod.string(),
+  "hasFaceDescriptor": zod.boolean().describe('Whether a face was detected and an internal AI descriptor stored for this photo'),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Remove an enrolled photo
+ */
+export const DeleteEmployeePhotoParams = zod.object({
+  "id": zod.coerce.number(),
+  "photoId": zod.coerce.number()
+})
+
+export const DeleteEmployeePhotoResponse = zod.void()
+
+
+/**
  * @summary List all cameras
  */
 export const ListCamerasResponseItem = zod.object({
@@ -470,6 +518,7 @@ export const CreateRecognitionBody = zod.object({
   "status": zod.enum(['recognized', 'unknown', 'denied']),
   "confidence": zod.number(),
   "snapshotUrl": zod.string().nullish(),
+  "snapshotBase64": zod.string().nullish().describe('Base64 snapshot of the detected face, provided by the camera\/NVR when status is \"unknown\" so the system\'s internal AI can attempt a fallback match against enrolled employee photos. Ignored when status is \"recognized\" or \"denied\".\n'),
   "detectedAt": zod.coerce.date()
 })
 

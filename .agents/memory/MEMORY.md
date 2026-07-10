@@ -1,2 +1,3 @@
 - [Session cookies behind Replit proxy](session-cookies-replit-proxy.md) — express-session `secure` cookies need `app.set("trust proxy", 1)` or they're silently never set/sent.
 - [Zod version in face-guard is v3](zod-v3-error-param.md) — `{ error: "..." }` param syntax is zod v4-only and fails typecheck; use `required_error`/plain `.min()` message instead.
+- [face-api.js + tfjs bundling in Node/esbuild](faceapi-tfjs-node-bundling.md) — use pure-JS `@tensorflow/tfjs` (not `tfjs-node`), force cpu backend, and bundle (don't externalize) face-api/tfjs in esbuild.

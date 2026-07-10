@@ -9,3 +9,4 @@ export * from "./zone_work_schedules";
 export * from "./system_users";
 export * from "./departments";
 export * from "./department_work_schedules";
+export * from "./employee_photos";

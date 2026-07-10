@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, ilike, or, and, desc } from "drizzle-orm";
-import { db, employeesTable, recognitionEventsTable, departmentsTable } from "@workspace/db";
+import { eq, ilike, or, and, desc, sql } from "drizzle-orm";
+import { db, employeesTable, recognitionEventsTable, departmentsTable, employeePhotosTable } from "@workspace/db";
 import {
   ListEmployeesQueryParams,
   CreateEmployeeBody,
@@ -15,9 +15,16 @@ import {
   UploadEmployeePhotoParams,
   UploadEmployeePhotoBody,
   UploadEmployeePhotoResponse,
+  ListEmployeePhotosParams,
+  ListEmployeePhotosResponse,
+  AddEmployeePhotoParams,
+  AddEmployeePhotoBody,
+  AddEmployeePhotoResponse,
+  DeleteEmployeePhotoParams,
 } from "@workspace/api-zod";
 import path from "path";
 import fs from "fs";
+import { computeFaceDescriptor } from "../lib/face-recognition";
 
 const router: IRouter = Router();
 
@@ -231,6 +238,110 @@ router.post("/employees/:id/photo", async (req, res): Promise<void> => {
     .where(eq(employeesTable.id, params.data.id));
 
   res.json(UploadEmployeePhotoResponse.parse(employee));
+});
+
+const MAX_ENROLLMENT_PHOTOS = 5;
+
+router.get("/employees/:id/photos", async (req, res): Promise<void> => {
+  const params = ListEmployeePhotosParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const photos = await db
+    .select()
+    .from(employeePhotosTable)
+    .where(eq(employeePhotosTable.employeeId, params.data.id))
+    .orderBy(employeePhotosTable.createdAt);
+
+  res.json(
+    ListEmployeePhotosResponse.parse(
+      photos.map((p) => ({
+        id: p.id,
+        employeeId: p.employeeId,
+        photoUrl: p.photoUrl,
+        hasFaceDescriptor: p.faceDescriptor != null,
+        createdAt: p.createdAt,
+      })),
+    ),
+  );
+});
+
+router.post("/employees/:id/photos", async (req, res): Promise<void> => {
+  const params = AddEmployeePhotoParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const parsed = AddEmployeePhotoBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [existing] = await db.select({ id: employeesTable.id, photoUrl: employeesTable.photoUrl }).from(employeesTable).where(eq(employeesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Employee not found" });
+    return;
+  }
+
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(employeePhotosTable)
+    .where(eq(employeePhotosTable.employeeId, params.data.id));
+  if (count >= MAX_ENROLLMENT_PHOTOS) {
+    res.status(400).json({ error: `Максимум ${MAX_ENROLLMENT_PHOTOS} снимки на служител` });
+    return;
+  }
+
+  const base64Data = parsed.data.photoBase64.replace(/^data:image\/\w+;base64,/, "");
+  const buffer = Buffer.from(base64Data, "base64");
+  const filename = `employee-${params.data.id}-${Date.now()}.jpg`;
+  const filePath = path.join(photosDir, filename);
+  fs.writeFileSync(filePath, buffer);
+  const photoUrl = `/api/uploads/photos/${filename}`;
+
+  let faceDescriptor: number[] | null = null;
+  try {
+    faceDescriptor = await computeFaceDescriptor(buffer);
+  } catch (err) {
+    req.log.warn({ err }, "Face descriptor computation failed");
+  }
+
+  const [photo] = await db
+    .insert(employeePhotosTable)
+    .values({ employeeId: params.data.id, photoUrl, faceDescriptor })
+    .returning();
+
+  if (!existing.photoUrl) {
+    await db.update(employeesTable).set({ photoUrl }).where(eq(employeesTable.id, params.data.id));
+  }
+
+  res.status(201).json(
+    AddEmployeePhotoResponse.parse({
+      id: photo.id,
+      employeeId: photo.employeeId,
+      photoUrl: photo.photoUrl,
+      hasFaceDescriptor: photo.faceDescriptor != null,
+      createdAt: photo.createdAt,
+    }),
+  );
+});
+
+router.delete("/employees/:id/photos/:photoId", async (req, res): Promise<void> => {
+  const params = DeleteEmployeePhotoParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  await db
+    .delete(employeePhotosTable)
+    .where(and(eq(employeePhotosTable.id, params.data.photoId), eq(employeePhotosTable.employeeId, params.data.id)));
+
+  res.sendStatus(204);
 });
 
 export default router;

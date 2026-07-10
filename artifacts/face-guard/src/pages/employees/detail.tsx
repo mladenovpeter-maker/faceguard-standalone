@@ -1,6 +1,6 @@
-import { useGetEmployee, useUpdateEmployee, useDeleteEmployee, useListRecognitions, useListDepartments, getListEmployeesQueryKey } from "@workspace/api-client-react";
+import { useGetEmployee, useUpdateEmployee, useDeleteEmployee, useListRecognitions, useListDepartments, getListEmployeesQueryKey, useListEmployeePhotos, useAddEmployeePhoto, useDeleteEmployeePhoto, getListEmployeePhotosQueryKey } from "@workspace/api-client-react";
 import { useParams, useLocation } from "wouter";
-import { ArrowLeft, User, Phone, Mail, Building, Briefcase, Calendar, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, User, Phone, Mail, Building, Briefcase, Calendar, Pencil, Trash2, ScanFace, Plus, X, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,8 +39,51 @@ export default function EmployeeDetail() {
   const { data: employee, isLoading: loadingEmp, refetch } = useGetEmployee(employeeId, { query: { enabled: !!employeeId } });
   const { data: recognitions, isLoading: loadingRec } = useListRecognitions({ employeeId, limit: 10 }, { query: { enabled: !!employeeId } });
   const { data: departments = [] } = useListDepartments();
+  const { data: photos = [], isLoading: loadingPhotos } = useListEmployeePhotos(employeeId, { query: { enabled: !!employeeId } });
   const updateEmployee = useUpdateEmployee();
   const deleteEmployee = useDeleteEmployee();
+  const addPhoto = useAddEmployeePhoto();
+  const deletePhoto = useDeleteEmployeePhoto();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const MAX_PHOTOS = 5;
+
+  function handleAddPhotoClick() {
+    photoInputRef.current?.click();
+  }
+
+  function handlePhotoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      const photoBase64 = result.split(',')[1];
+      addPhoto.mutate({ id: employeeId, data: { photoBase64 } }, {
+        onSuccess: (photo) => {
+          toast({
+            title: "Снимката е добавена",
+            description: photo.hasFaceDescriptor
+              ? "Лицето е разпознато и запазено за AI съвпадение."
+              : "Не бе открито лице на снимката — тя ще се показва, но няма да се използва за AI разпознаване.",
+          });
+          queryClient.invalidateQueries({ queryKey: getListEmployeePhotosQueryKey(employeeId) });
+        },
+        onError: (err: any) => toast({ title: "Грешка при качване", description: err.message, variant: "destructive" }),
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleDeletePhoto(photoId: number) {
+    deletePhoto.mutate({ id: employeeId, photoId }, {
+      onSuccess: () => {
+        toast({ title: "Снимката е изтрита" });
+        queryClient.invalidateQueries({ queryKey: getListEmployeePhotosQueryKey(employeeId) });
+      },
+      onError: (err: any) => toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" }),
+    });
+  }
 
   const form = useForm<z.infer<typeof editSchema>>({
     resolver: zodResolver(editSchema),
@@ -211,6 +254,70 @@ export default function EmployeeDetail() {
         </Card>
 
         <div className="col-span-1 md:col-span-2 space-y-6">
+          <Card className="border-border bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <ScanFace className="h-4 w-4" /> Снимки за разпознаване ({photos.length}/{MAX_PHOTOS})
+              </CardTitle>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoFileChange}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddPhotoClick}
+                disabled={photos.length >= MAX_PHOTOS || addPhoto.isPending}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {addPhoto.isPending ? "Качване..." : "Добави снимка"}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground mb-4">
+                Добавете 2–5 снимки от различни ъгли, за да подобрите точността на разпознаване. Тези снимки се използват само като резервен вариант, когато камерата не успее да разпознае лицето.
+              </p>
+              {loadingPhotos ? (
+                <div className="flex gap-3"><Skeleton className="h-24 w-24 rounded-lg" /><Skeleton className="h-24 w-24 rounded-lg" /></div>
+              ) : photos.length === 0 ? (
+                <div className="text-center py-6 text-sm text-muted-foreground border border-dashed border-border rounded-lg">
+                  Няма добавени снимки за AI разпознаване
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="relative group">
+                      <div className="h-24 w-24 rounded-lg overflow-hidden border border-border bg-muted">
+                        <img src={photo.photoUrl} alt="Снимка за разпознаване" className="h-full w-full object-cover" />
+                      </div>
+                      <div
+                        className={`absolute bottom-1 left-1 rounded-full p-0.5 ${photo.hasFaceDescriptor ? 'bg-green-500/90' : 'bg-amber-500/90'}`}
+                        title={photo.hasFaceDescriptor ? "Лицето е разпознато" : "Не бе открито лице"}
+                      >
+                        {photo.hasFaceDescriptor ? (
+                          <ShieldCheck className="h-3.5 w-3.5 text-white" />
+                        ) : (
+                          <ShieldAlert className="h-3.5 w-3.5 text-white" />
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePhoto(photo.id)}
+                        className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label="Изтрий снимката"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Последни събития за достъп</CardTitle>

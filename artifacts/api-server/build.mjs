@@ -55,7 +55,11 @@ async function buildAll() {
       "typeorm",
       "protobufjs",
       "onnxruntime-node",
-      "@tensorflow/*",
+      // Note: @tensorflow/tfjs (pure-JS, no native binary) is intentionally NOT externalized —
+      // it must be bundled so esbuild resolves its extensionless internal imports; Node's
+      // strict ESM loader fails on those if the package is left external.
+      "@tensorflow/tfjs-node",
+      "@tensorflow/tfjs-node-gpu",
       "@prisma/client",
       "@mikro-orm/*",
       "@grpc/*",

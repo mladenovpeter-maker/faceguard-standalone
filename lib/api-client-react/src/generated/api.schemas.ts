@@ -136,6 +136,15 @@ export interface PhotoUpload {
   photoBase64: string;
 }
 
+export interface EmployeePhoto {
+  id: number;
+  employeeId: number;
+  photoUrl: string;
+  /** Whether a face was detected and an internal AI descriptor stored for this photo */
+  hasFaceDescriptor: boolean;
+  createdAt: string;
+}
+
 export type CameraBrand = typeof CameraBrand[keyof typeof CameraBrand];
 
 
@@ -387,6 +396,11 @@ export interface RecognitionInput {
   confidence: number;
   /** @nullable */
   snapshotUrl?: string | null;
+  /**
+     * Base64 snapshot of the detected face, provided by the camera/NVR when status is "unknown" so the system's internal AI can attempt a fallback match against enrolled employee photos. Ignored when status is "recognized" or "denied".
+     * @nullable
+     */
+  snapshotBase64?: string | null;
   detectedAt: string;
 }
 

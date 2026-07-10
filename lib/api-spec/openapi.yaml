@@ -176,6 +176,69 @@ paths:
               schema:
                 $ref: "#/components/schemas/Employee"
 
+  /employees/{id}/photos:
+    get:
+      operationId: listEmployeePhotos
+      tags: [employees]
+      summary: List all enrolled photos for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of enrolled photos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeePhoto"
+    post:
+      operationId: addEmployeePhoto
+      tags: [employees]
+      summary: Add an enrollment photo for an employee (max 5). Computes an internal AI face descriptor used as a fallback when the camera itself cannot recognize the person.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PhotoUpload"
+      responses:
+        "201":
+          description: Photo added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePhoto"
+
+  /employees/{id}/photos/{photoId}:
+    delete:
+      operationId: deleteEmployeePhoto
+      tags: [employees]
+      summary: Remove an enrolled photo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
 
   # CAMERAS
   /cameras:
@@ -1075,6 +1138,23 @@ components:
           type: string
           description: Base64 encoded image
 
+    EmployeePhoto:
+      type: object
+      required: [id, employeeId, photoUrl, hasFaceDescriptor, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        photoUrl:
+          type: string
+        hasFaceDescriptor:
+          type: boolean
+          description: Whether a face was detected and an internal AI descriptor stored for this photo
+        createdAt:
+          type: string
+          format: date-time
+
     Camera:
       type: object
       required: [id, name, brand, protocol, host, zoneId, status, createdAt]
@@ -1293,6 +1373,12 @@ components:
           type: number
         snapshotUrl:
           type: ["string", "null"]
+        snapshotBase64:
+          type: ["string", "null"]
+          description: >
+            Base64 snapshot of the detected face, provided by the camera/NVR when status is
+            "unknown" so the system's internal AI can attempt a fallback match against
+            enrolled employee photos. Ignored when status is "recognized" or "denied".
         detectedAt:
           type: string
           format: date-time

@@ -32,6 +32,7 @@ export * from './departmentWorkSchedule';
 export * from './departmentWorkScheduleInput';
 export * from './employee';
 export * from './employeeInput';
+export * from './employeePhoto';
 export * from './employeePresence';
 export * from './employeeStatus';
 export * from './employeeUpdate';

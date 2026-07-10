@@ -15,5 +15,10 @@ export interface RecognitionInput {
   confidence: number;
   /** @nullable */
   snapshotUrl?: string | null;
+  /**
+     * Base64 snapshot of the detected face, provided by the camera/NVR when status is "unknown" so the system's internal AI can attempt a fallback match against enrolled employee photos. Ignored when status is "recognized" or "denied".
+     * @nullable
+     */
+  snapshotBase64?: string | null;
   detectedAt: Date;
 }
