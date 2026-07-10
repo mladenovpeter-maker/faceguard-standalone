@@ -64,17 +64,5 @@ services:
     ports:
       - "8081:80"
 
-  # Cloudflare Tunnel: exposes face-guard (the web app, which proxies /api
-  # internally to api-server) at your subdomain, without opening any router
-  # ports. The token is provided by Cloudflare Zero Trust -> Networks ->
-  # Tunnels -> your tunnel -> Docker install instructions. Set it in .env as
-  # CLOUDFLARE_TUNNEL_TOKEN; never commit the real token to git.
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - face-guard
-
 volumes:
   faceguard-db-data:
