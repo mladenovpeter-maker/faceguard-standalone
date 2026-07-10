@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 const LEAVE_LABELS: Record<string, string> = {
   paid_leave: "Платен отпуск",
@@ -20,46 +20,52 @@ export default function Dashboard() {
   const { data: presence, isLoading: loadingPresence } = useGetDashboardPresence({ query: { refetchInterval: 15000 } });
   const [absentExpanded, setAbsentExpanded] = useState(false);
 
-  const presentList = presence?.filter(p => p.present && !p.onLeave) ?? [];
-  const onLeaveList = presence?.filter(p => p.onLeave) ?? [];
-  const absentList = presence?.filter(p => !p.present && !p.onLeave) ?? [];
+  const presentList = useMemo(() => presence?.filter(p => p.present && !p.onLeave) ?? [], [presence]);
+  const onLeaveList = useMemo(() => presence?.filter(p => p.onLeave) ?? [], [presence]);
+  const absentList  = useMemo(() => presence?.filter(p => !p.present && !p.onLeave) ?? [], [presence]);
 
   // Sort present by arrival time (earliest first)
-  const sortedPresent = [...presentList].sort((a, b) =>
-    new Date(a.firstSeen!).getTime() - new Date(b.firstSeen!).getTime()
+  const sortedPresent = useMemo(
+    () => [...presentList].sort((a, b) => new Date(a.firstSeen!).getTime() - new Date(b.firstSeen!).getTime()),
+    [presentList]
   );
 
   // Arrival distribution (30-min buckets 06:00–12:00)
-  const arrivalSlots: { label: string; count: number; late: boolean }[] = [];
-  for (let h = 6; h <= 11; h++) {
-    for (const m of [0, 30]) {
-      const label = `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`;
-      const late = h > 9 || (h === 9 && m >= 30);
-      arrivalSlots.push({ label, count: 0, late });
+  const arrivalSlots = useMemo(() => {
+    const slots: { label: string; count: number; late: boolean }[] = [];
+    for (let h = 6; h <= 11; h++) {
+      for (const m of [0, 30]) {
+        const label = `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`;
+        const late = h > 9 || (h === 9 && m >= 30);
+        slots.push({ label, count: 0, late });
+      }
     }
-  }
-  if (presence) {
-    for (const emp of presence) {
-      if (!emp.firstSeen) continue;
-      const d = new Date(emp.firstSeen);
-      const h = d.getHours();
-      const m = d.getMinutes() >= 30 ? 30 : 0;
-      const idx = (h - 6) * 2 + (m === 30 ? 1 : 0);
-      if (idx >= 0 && idx < arrivalSlots.length) arrivalSlots[idx].count++;
+    if (presence) {
+      for (const emp of presence) {
+        if (!emp.firstSeen) continue;
+        const d = new Date(emp.firstSeen);
+        const h = d.getHours();
+        const m = d.getMinutes() >= 30 ? 30 : 0;
+        const idx = (h - 6) * 2 + (m === 30 ? 1 : 0);
+        if (idx >= 0 && idx < slots.length) slots[idx].count++;
+      }
     }
-  }
+    return slots;
+  }, [presence]);
   const hasArrivals = arrivalSlots.some(s => s.count > 0);
 
   // Department breakdown
-  const deptMap: Record<string, { present: number; total: number }> = {};
-  if (presence) {
-    for (const emp of presence) {
-      if (!deptMap[emp.department]) deptMap[emp.department] = { present: 0, total: 0 };
-      deptMap[emp.department].total++;
-      if (emp.present) deptMap[emp.department].present++;
+  const depts = useMemo(() => {
+    const deptMap: Record<string, { present: number; total: number }> = {};
+    if (presence) {
+      for (const emp of presence) {
+        if (!deptMap[emp.department]) deptMap[emp.department] = { present: 0, total: 0 };
+        deptMap[emp.department].total++;
+        if (emp.present) deptMap[emp.department].present++;
+      }
     }
-  }
-  const depts = Object.entries(deptMap).sort((a, b) => b[1].total - a[1].total);
+    return Object.entries(deptMap).sort((a, b) => b[1].total - a[1].total);
+  }, [presence]);
   const totalActive = presence?.length ?? 0;
 
   return (
@@ -277,7 +283,7 @@ export default function Dashboard() {
                       formatter={(v: number) => [`${v} влизания`]}
                       cursor={{ fill: "hsl(var(--muted))" }}
                     />
-                    <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+                    <Bar dataKey="count" radius={[3, 3, 0, 0]} isAnimationActive={false}>
                       {arrivalSlots.map((slot, i) => (
                         <Cell key={i} fill={slot.late ? "hsl(38 92% 50%)" : "hsl(142 71% 45%)"} />
                       ))}
