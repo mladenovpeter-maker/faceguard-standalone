@@ -1,0 +1,39 @@
+tmm@tmm:~/faceguard-standalone$ cd ~/faceguard-standalone
+git fetch origin
+git reset --hard origin/main
+echo "CLOUDFLARE_TUNNEL_TOKEN=eyJhIjoiNTgzMzE2N2M1ZDgzYzQzYTQxZjA3ZWYzNmZkMzI2MzgiLCJ0IjoiN2ZhZDE5YmEtZmNkNS00MDc4LTgyZmMtZTE3OWI1ZDdjYTk3IiwicyI6Ik9UZzBNemsxWmpZdE56UTFPQzAwTldVd0xUa3paRGd0TURsa05XUmtObVF6WlRVNCJ9" >> .env
+docker compose --env-file .env up -d cloudflared
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 4 (delta 3), reused 4 (delta 3), pack-reused 0 (from 0)
+Unpacking objects: 100% (4/4), 900 bytes | 300.00 KiB/s, done.
+From https://github.com/mladenovpeter-maker/faceguard-standalone
+   7871fb4..1d774dd  main       -> origin/main
+HEAD is now at 1d774dd Add cloudflared tunnel service for public subdomain access
+[+] Running 19/19
+ ✔ cloudflared Pulled                                                                                         5.1s 
+   ✔ c860d23880ef Pull complete                                                                               3.2s 
+   ✔ d6b1b89eccac Pull complete                                                                               0.9s 
+   ✔ 99ba982a9142 Pull complete                                                                               1.0s 
+   ✔ 52630fc75a18 Pull complete                                                                               0.4s 
+   ✔ c172f21841df Pull complete                                                                               0.5s 
+   ✔ bdfd7f7e5bf6 Pull complete                                                                               0.5s 
+   ✔ 2780920e5dbf Pull complete                                                                               0.6s 
+   ✔ 3214acf345c0 Pull complete                                                                               0.6s 
+   ✔ dd64bf2dd177 Pull complete                                                                               0.6s 
+   ✔ 47de5dd0b812 Pull complete                                                                               0.8s 
+   ✔ bd8962e29291 Pull complete                                                                               1.4s 
+   ✔ ebddc55facdc Pull complete                                                                               0.9s 
+   ✔ 99515e7b4d35 Pull complete                                                                               0.9s 
+   ✔ b839dfae01f6 Pull complete                                                                               0.6s 
+   ✔ 2d4d7adf6272 Pull complete                                                                               2.6s 
+   ✔ cac2ae0193cb Pull complete                                                                               0.7s 
+   ✔ cf397222899a Pull complete                                                                               2.4s 
+   ✔ 7c12895b777b Pull complete                                                                               0.7s 
+[+] Running 4/4
+ ✔ Container faceguard-standalone-postgres-1     Healthy                                                      0.8s 
+ ✔ Container faceguard-standalone-api-server-1   Running                                                      0.0s 
+ ✔ Container faceguard-standalone-face-guard-1   Running                                                      0.0s 
+ ✔ Container faceguard-standalone-cloudflared-1  Started                                                      1.0s 
+tmm@tmm:~/faceguard-standalone$ 
