@@ -359,7 +359,8 @@ export const TestCameraConnectionParams = zod.object({
 export const TestCameraConnectionResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
-  "latencyMs": zod.number().nullish()
+  "latencyMs": zod.number().nullish(),
+  "snapshotBase64": zod.string().nullish()
 })
 
 

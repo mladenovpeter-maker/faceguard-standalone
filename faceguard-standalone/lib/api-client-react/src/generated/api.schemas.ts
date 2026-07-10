@@ -274,6 +274,8 @@ export interface CameraTestResult {
   message: string;
   /** @nullable */
   latencyMs?: number | null;
+  /** @nullable */
+  snapshotBase64?: string | null;
 }
 
 export type ZoneAccessLevel = typeof ZoneAccessLevel[keyof typeof ZoneAccessLevel];

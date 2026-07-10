@@ -149,10 +149,11 @@ export default function CameraList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editCamera, setEditCamera] = useState<CameraRow | null>(null);
+  const [snapshot, setSnapshot] = useState<{ cameraName: string; imageBase64: string } | null>(null);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListCamerasQueryKey() });
 
-  function handleTest(id: number) {
+  function handleTest(id: number, cameraName: string) {
     testCamera.mutate({ id }, {
       onSuccess: (result) => {
         toast({
@@ -160,6 +161,9 @@ export default function CameraList() {
           description: result.message,
           variant: result.success ? "default" : "destructive",
         });
+        if (result.success && result.snapshotBase64) {
+          setSnapshot({ cameraName, imageBase64: result.snapshotBase64 });
+        }
         invalidate();
       },
       onError: (err: any) => toast({ title: "Грешка при теста", description: err.message, variant: "destructive" }),
@@ -191,6 +195,16 @@ export default function CameraList() {
           </Button>
         </Link>
       </div>
+
+      {/* Snapshot dialog */}
+      <Dialog open={!!snapshot} onOpenChange={(o) => !o && setSnapshot(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader><DialogTitle>Кадър от камера „{snapshot?.cameraName}"</DialogTitle></DialogHeader>
+          {snapshot && (
+            <img src={snapshot.imageBase64} alt={`Кадър от ${snapshot.cameraName}`} className="w-full rounded-md border border-border" />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit dialog */}
       <Dialog open={!!editCamera} onOpenChange={(o) => !o && setEditCamera(null)}>
@@ -243,7 +257,7 @@ export default function CameraList() {
                       <Button
                         variant="outline" size="sm" className="font-mono text-xs h-7 mr-1"
                         disabled={testCamera.isPending}
-                        onClick={() => handleTest(camera.id)}
+                        onClick={() => handleTest(camera.id, camera.name)}
                       >
                         <Network className="h-3 w-3 mr-1" /> {testCamera.isPending ? "..." : "ТЕСТ"}
                       </Button>

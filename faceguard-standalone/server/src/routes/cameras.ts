@@ -175,7 +175,7 @@ router.post("/cameras/:id/test", async (req, res): Promise<void> => {
   const start = Date.now();
 
   try {
-    await captureFrame(camera);
+    const frame = await captureFrame(camera);
     const latencyMs = Date.now() - start;
 
     await db.update(camerasTable).set({ status: "online" }).where(eq(camerasTable.id, params.data.id));
@@ -184,6 +184,7 @@ router.post("/cameras/:id/test", async (req, res): Promise<void> => {
       success: true,
       message: `Successfully connected to ${camera.brand.toUpperCase()} camera at ${camera.host}`,
       latencyMs,
+      snapshotBase64: `data:image/jpeg;base64,${frame.toString("base64")}`,
     }));
   } catch (err) {
     await db.update(camerasTable).set({ status: "offline" }).where(eq(camerasTable.id, params.data.id));
