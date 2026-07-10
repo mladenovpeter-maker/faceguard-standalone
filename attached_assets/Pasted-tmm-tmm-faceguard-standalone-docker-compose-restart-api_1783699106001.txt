@@ -1,0 +1,25 @@
+tmm@tmm:~/faceguard-standalone$ docker compose restart api-server
+docker compose logs --tail=20 api-server
+[+] Restarting 1/1
+ ✔ Container faceguard-standalone-api-server-1  Started                                                      10.4s 
+api-server-1  | params: admin
+api-server-1  |     at NodePgPreparedQuery.queryWithCache (/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/src/pg-core/session.ts:73:11)
+api-server-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+api-server-1  |     at async <anonymous> (/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/src/node-postgres/session.ts:154:19)
+api-server-1  |     at async <anonymous> (/app/src/routes/auth.ts:32:18)
+api-server-1  | {"level":30,"time":1783698976585,"pid":1,"hostname":"63303081140a","req":{"id":13,"method":"POST","url":"/api/auth/login"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)\n    at ServerResponse.onResponseComplete (/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)\n    at ServerResponse.emit (node:events:521:24)\n    at onFinish (node:_http_outgoing:1031:10)\n    at callback (node:internal/streams/writable:764:21)\n    at afterWrite (node:internal/streams/writable:708:5)\n    at afterWriteTick (node:internal/streams/writable:694:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)"},"responseTime":12,"msg":"request errored"}
+api-server-1  | Error: Failed query: select "id", "username", "password_hash", "role", "display_name", "created_at", "updated_at" from "system_users" where "system_users"."username" = $1
+api-server-1  | params: admin
+api-server-1  |     at NodePgPreparedQuery.queryWithCache (/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/src/pg-core/session.ts:73:11)
+api-server-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+api-server-1  |     at async <anonymous> (/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/src/node-postgres/session.ts:154:19)
+api-server-1  |     at async <anonymous> (/app/src/routes/auth.ts:32:18)
+api-server-1  | {"level":30,"time":1783699037020,"pid":1,"hostname":"63303081140a","req":{"id":14,"method":"POST","url":"/api/auth/login"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)\n    at ServerResponse.onResponseComplete (/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)\n    at ServerResponse.emit (node:events:521:24)\n    at onFinish (node:_http_outgoing:1031:10)\n    at callback (node:internal/streams/writable:764:21)\n    at afterWrite (node:internal/streams/writable:708:5)\n    at afterWriteTick (node:internal/streams/writable:694:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)"},"responseTime":9,"msg":"request errored"}
+api-server-1  | Error: Failed query: select "id", "username", "password_hash", "role", "display_name", "created_at", "updated_at" from "system_users" where "system_users"."username" = $1
+api-server-1  | params: admin
+api-server-1  |     at NodePgPreparedQuery.queryWithCache (/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/src/pg-core/session.ts:73:11)
+api-server-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+api-server-1  |     at async <anonymous> (/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/src/node-postgres/session.ts:154:19)
+api-server-1  |     at async <anonymous> (/app/src/routes/auth.ts:32:18)
+api-server-1  | {"level":30,"time":1783699097407,"pid":1,"hostname":"63303081140a","req":{"id":15,"method":"POST","url":"/api/auth/login"},"res":{"statusCode":401},"responseTime":14,"msg":"request completed"}
+tmm@tmm:~/faceguard-standalone$ 
