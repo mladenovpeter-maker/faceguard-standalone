@@ -12,7 +12,8 @@ export interface Employee {
   firstName: string;
   lastName: string;
   employeeNumber: string;
-  department: string;
+  departmentId: number;
+  departmentName: string;
   position: string;
   /** @nullable */
   email?: string | null;

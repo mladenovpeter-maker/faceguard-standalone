@@ -6,13 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GetAttendanceReportParams = {
-from: Date;
-to: Date;
-/**
- * @nullable
- */
-employeeId?: number | null;
+export type ListDepartmentSchedulesParams = {
 /**
  * @nullable
  */

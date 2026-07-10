@@ -10,6 +10,8 @@ import attendanceRouter from "./attendance";
 import dashboardRouter from "./dashboard";
 import leavesRouter from "./leaves";
 import zoneSchedulesRouter from "./zone_schedules";
+import departmentsRouter from "./departments";
+import departmentSchedulesRouter from "./department_schedules";
 
 const router: IRouter = Router();
 
@@ -24,5 +26,7 @@ router.use(attendanceRouter);
 router.use(dashboardRouter);
 router.use(leavesRouter);
 router.use(zoneSchedulesRouter);
+router.use(departmentsRouter);
+router.use(departmentSchedulesRouter);
 
 export default router;

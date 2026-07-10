@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, ilike, or, and, desc } from "drizzle-orm";
-import { db, employeesTable, recognitionEventsTable } from "@workspace/db";
+import { db, employeesTable, recognitionEventsTable, departmentsTable } from "@workspace/db";
 import {
   ListEmployeesQueryParams,
   CreateEmployeeBody,
@@ -28,6 +28,22 @@ const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"
 const photosDir = path.resolve(workspaceRoot, "artifacts/api-server/uploads/photos");
 fs.mkdirSync(photosDir, { recursive: true });
 
+const employeeColumns = {
+  id: employeesTable.id,
+  firstName: employeesTable.firstName,
+  lastName: employeesTable.lastName,
+  employeeNumber: employeesTable.employeeNumber,
+  departmentId: employeesTable.departmentId,
+  departmentName: departmentsTable.name,
+  position: employeesTable.position,
+  email: employeesTable.email,
+  phone: employeesTable.phone,
+  photoUrl: employeesTable.photoUrl,
+  status: employeesTable.status,
+  hiredAt: employeesTable.hiredAt,
+  createdAt: employeesTable.createdAt,
+};
+
 router.get("/employees", async (req, res): Promise<void> => {
   const query = ListEmployeesQueryParams.safeParse(req.query);
   if (!query.success) {
@@ -45,9 +61,13 @@ router.get("/employees", async (req, res): Promise<void> => {
         ilike(employeesTable.firstName, `%${search}%`),
         ilike(employeesTable.lastName, `%${search}%`),
         ilike(employeesTable.employeeNumber, `%${search}%`),
-        ilike(employeesTable.department, `%${search}%`),
+        ilike(departmentsTable.name, `%${search}%`),
       )
     );
+  }
+
+  if (departmentId != null) {
+    conditions.push(eq(employeesTable.departmentId, departmentId));
   }
 
   if (status && status !== "all") {
@@ -55,8 +75,9 @@ router.get("/employees", async (req, res): Promise<void> => {
   }
 
   const employees = await db
-    .select()
+    .select(employeeColumns)
     .from(employeesTable)
+    .leftJoin(departmentsTable, eq(departmentsTable.id, employeesTable.departmentId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(employeesTable.createdAt));
 
@@ -74,14 +95,20 @@ router.post("/employees", async (req, res): Promise<void> => {
     firstName: parsed.data.firstName,
     lastName: parsed.data.lastName,
     employeeNumber: parsed.data.employeeNumber,
-    department: parsed.data.department,
+    departmentId: parsed.data.departmentId,
     position: parsed.data.position,
     email: parsed.data.email ?? null,
     phone: parsed.data.phone ?? null,
     hiredAt: parsed.data.hiredAt != null ? String(parsed.data.hiredAt) : null,
-  }).returning();
+  }).returning({ id: employeesTable.id });
 
-  res.status(201).json(CreateEmployeeResponse.parse(employee));
+  const [created] = await db
+    .select(employeeColumns)
+    .from(employeesTable)
+    .leftJoin(departmentsTable, eq(departmentsTable.id, employeesTable.departmentId))
+    .where(eq(employeesTable.id, employee.id));
+
+  res.status(201).json(CreateEmployeeResponse.parse(created));
 });
 
 router.get("/employees/:id", async (req, res): Promise<void> => {
@@ -92,8 +119,9 @@ router.get("/employees/:id", async (req, res): Promise<void> => {
   }
 
   const [employee] = await db
-    .select()
+    .select(employeeColumns)
     .from(employeesTable)
+    .leftJoin(departmentsTable, eq(departmentsTable.id, employeesTable.departmentId))
     .where(eq(employeesTable.id, params.data.id));
 
   if (!employee) {
@@ -120,16 +148,22 @@ router.patch("/employees/:id", async (req, res): Promise<void> => {
   const updateData: any = { ...parsed.data };
   if (updateData.hiredAt != null) updateData.hiredAt = String(updateData.hiredAt);
 
-  const [employee] = await db
-    .update(employeesTable)
-    .set(updateData)
-    .where(eq(employeesTable.id, params.data.id))
-    .returning();
-
-  if (!employee) {
+  const [existing] = await db.select({ id: employeesTable.id }).from(employeesTable).where(eq(employeesTable.id, params.data.id));
+  if (!existing) {
     res.status(404).json({ error: "Employee not found" });
     return;
   }
+
+  await db
+    .update(employeesTable)
+    .set(updateData)
+    .where(eq(employeesTable.id, params.data.id));
+
+  const [employee] = await db
+    .select(employeeColumns)
+    .from(employeesTable)
+    .leftJoin(departmentsTable, eq(departmentsTable.id, employeesTable.departmentId))
+    .where(eq(employeesTable.id, params.data.id));
 
   res.json(UpdateEmployeeResponse.parse(employee));
 });
@@ -179,16 +213,22 @@ router.post("/employees/:id/photo", async (req, res): Promise<void> => {
 
   const photoUrl = `/api/uploads/photos/${filename}`;
 
-  const [employee] = await db
-    .update(employeesTable)
-    .set({ photoUrl })
-    .where(eq(employeesTable.id, params.data.id))
-    .returning();
-
-  if (!employee) {
+  const [existing] = await db.select({ id: employeesTable.id }).from(employeesTable).where(eq(employeesTable.id, params.data.id));
+  if (!existing) {
     res.status(404).json({ error: "Employee not found" });
     return;
   }
+
+  await db
+    .update(employeesTable)
+    .set({ photoUrl })
+    .where(eq(employeesTable.id, params.data.id));
+
+  const [employee] = await db
+    .select(employeeColumns)
+    .from(employeesTable)
+    .leftJoin(departmentsTable, eq(departmentsTable.id, employeesTable.departmentId))
+    .where(eq(employeesTable.id, params.data.id));
 
   res.json(UploadEmployeePhotoResponse.parse(employee));
 });

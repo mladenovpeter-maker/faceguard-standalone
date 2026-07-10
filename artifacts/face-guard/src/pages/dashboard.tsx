@@ -59,9 +59,9 @@ export default function Dashboard() {
     const deptMap: Record<string, { present: number; total: number }> = {};
     if (presence) {
       for (const emp of presence) {
-        if (!deptMap[emp.department]) deptMap[emp.department] = { present: 0, total: 0 };
-        deptMap[emp.department].total++;
-        if (emp.present) deptMap[emp.department].present++;
+        if (!deptMap[emp.departmentName]) deptMap[emp.departmentName] = { present: 0, total: 0 };
+        deptMap[emp.departmentName].total++;
+        if (emp.present) deptMap[emp.departmentName].present++;
       }
     }
     return Object.entries(deptMap).sort((a, b) => b[1].total - a[1].total);
@@ -180,7 +180,7 @@ export default function Dashboard() {
                           </div>
                           <div className="w-full min-w-0">
                             <p className="text-[11px] font-semibold truncate leading-tight">{emp.firstName} {emp.lastName}</p>
-                            <p className="text-[9px] text-muted-foreground truncate">{emp.department}</p>
+                            <p className="text-[9px] text-muted-foreground truncate">{emp.departmentName}</p>
                           </div>
                           <Badge variant="outline" className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 text-[9px] px-1 py-0 font-mono h-4">
                             ▶ {arrivalTime}
@@ -237,7 +237,7 @@ export default function Dashboard() {
                             {emp.firstName[0]}{emp.lastName[0]}
                           </div>
                           <span className="text-xs text-muted-foreground">{emp.firstName} {emp.lastName}</span>
-                          <span className="text-[9px] text-muted-foreground/60 font-mono">{emp.department}</span>
+                          <span className="text-[9px] text-muted-foreground/60 font-mono">{emp.departmentName}</span>
                         </div>
                       ))}
                     </div>

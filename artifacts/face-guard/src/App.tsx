@@ -12,6 +12,8 @@ import Dashboard from "@/pages/dashboard";
 import EmployeeList from "@/pages/employees/index";
 import EmployeeNew from "@/pages/employees/new";
 import EmployeeDetail from "@/pages/employees/detail";
+import DepartmentList from "@/pages/departments/index";
+import DepartmentSchedulesPage from "@/pages/department-schedules/index";
 import CameraList from "@/pages/cameras/index";
 import CameraNew from "@/pages/cameras/new";
 import ZoneList from "@/pages/zones/index";
@@ -51,6 +53,8 @@ function AppRoutes() {
         <Route path="/employees" component={EmployeeList} />
         <Route path="/employees/new" component={EmployeeNew} />
         <Route path="/employees/:id" component={EmployeeDetail} />
+        <Route path="/departments" component={DepartmentList} />
+        <Route path="/department-schedules" component={DepartmentSchedulesPage} />
         <Route path="/cameras" component={CameraList} />
         <Route path="/cameras/new" component={CameraNew} />
         <Route path="/zones" component={ZoneList} />

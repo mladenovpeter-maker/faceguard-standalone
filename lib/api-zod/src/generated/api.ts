@@ -32,7 +32,8 @@ export const ListEmployeesResponseItem = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "employeeNumber": zod.string(),
-  "department": zod.string(),
+  "departmentId": zod.number(),
+  "departmentName": zod.string(),
   "position": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -56,7 +57,7 @@ export const CreateEmployeeBody = zod.object({
   "firstName": zod.string().min(1),
   "lastName": zod.string().min(1),
   "employeeNumber": zod.string().min(1),
-  "department": zod.string(),
+  "departmentId": zod.number(),
   "position": zod.string(),
   "email": zod.string().optional(),
   "phone": zod.string().optional(),
@@ -68,7 +69,8 @@ export const CreateEmployeeResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "employeeNumber": zod.string(),
-  "department": zod.string(),
+  "departmentId": zod.number(),
+  "departmentName": zod.string(),
   "position": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -91,7 +93,8 @@ export const GetEmployeeResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "employeeNumber": zod.string(),
-  "department": zod.string(),
+  "departmentId": zod.number(),
+  "departmentName": zod.string(),
   "position": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -112,7 +115,7 @@ export const UpdateEmployeeParams = zod.object({
 export const UpdateEmployeeBody = zod.object({
   "firstName": zod.string().optional(),
   "lastName": zod.string().optional(),
-  "department": zod.string().optional(),
+  "departmentId": zod.number().optional(),
   "position": zod.string().optional(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -125,7 +128,8 @@ export const UpdateEmployeeResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "employeeNumber": zod.string(),
-  "department": zod.string(),
+  "departmentId": zod.number(),
+  "departmentName": zod.string(),
   "position": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -162,7 +166,8 @@ export const UploadEmployeePhotoResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "employeeNumber": zod.string(),
-  "department": zod.string(),
+  "departmentId": zod.number(),
+  "departmentName": zod.string(),
   "position": zod.string(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
@@ -537,7 +542,7 @@ export const GetTodayAttendanceResponse = zod.object({
   "employeeName": zod.string(),
   "employeeNumber": zod.string(),
   "employeePhotoUrl": zod.string().nullish(),
-  "department": zod.string().optional(),
+  "departmentName": zod.string().optional(),
   "position": zod.string().optional(),
   "leaveId": zod.number().nullish(),
   "leaveType": zod.union([zod.literal('paid_leave'),zod.literal('unpaid_leave'),zod.literal('sick_leave'),zod.literal('other'),zod.literal(null)]).nullish(),
@@ -555,7 +560,7 @@ export const GetAttendanceReportQueryParams = zod.object({
   "from": zod.date(),
   "to": zod.date(),
   "employeeId": zod.coerce.number().nullish(),
-  "department": zod.coerce.string().nullish()
+  "departmentId": zod.coerce.number().nullish()
 })
 
 export const GetAttendanceReportResponse = zod.object({
@@ -568,7 +573,7 @@ export const GetAttendanceReportResponse = zod.object({
   "employeeName": zod.string(),
   "employeeNumber": zod.string(),
   "employeePhotoUrl": zod.string().nullish(),
-  "department": zod.string(),
+  "departmentName": zod.string(),
   "position": zod.string(),
   "daysPresent": zod.number(),
   "daysAbsent": zod.number(),
@@ -602,7 +607,7 @@ export const ListLeavesResponseItem = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeNumber": zod.string().nullish(),
   "employeePhotoUrl": zod.string().nullish(),
-  "department": zod.string().nullish(),
+  "departmentName": zod.string().nullish(),
   "type": zod.enum(['paid_leave', 'unpaid_leave', 'sick_leave', 'other']),
   "startDate": zod.coerce.date(),
   "endDate": zod.coerce.date(),
@@ -633,7 +638,7 @@ export const CreateLeaveResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeNumber": zod.string().nullish(),
   "employeePhotoUrl": zod.string().nullish(),
-  "department": zod.string().nullish(),
+  "departmentName": zod.string().nullish(),
   "type": zod.enum(['paid_leave', 'unpaid_leave', 'sick_leave', 'other']),
   "startDate": zod.coerce.date(),
   "endDate": zod.coerce.date(),
@@ -657,7 +662,7 @@ export const GetLeaveResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeNumber": zod.string().nullish(),
   "employeePhotoUrl": zod.string().nullish(),
-  "department": zod.string().nullish(),
+  "departmentName": zod.string().nullish(),
   "type": zod.enum(['paid_leave', 'unpaid_leave', 'sick_leave', 'other']),
   "startDate": zod.coerce.date(),
   "endDate": zod.coerce.date(),
@@ -691,7 +696,7 @@ export const UpdateLeaveResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeNumber": zod.string().nullish(),
   "employeePhotoUrl": zod.string().nullish(),
-  "department": zod.string().nullish(),
+  "departmentName": zod.string().nullish(),
   "type": zod.enum(['paid_leave', 'unpaid_leave', 'sick_leave', 'other']),
   "startDate": zod.coerce.date(),
   "endDate": zod.coerce.date(),
@@ -773,6 +778,128 @@ export const DeleteZoneScheduleResponse = zod.void()
 
 
 /**
+ * @summary List all departments
+ */
+export const ListDepartmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "employeeCount": zod.number().optional(),
+  "createdAt": zod.coerce.date()
+})
+export const ListDepartmentsResponse = zod.array(ListDepartmentsResponseItem)
+
+
+/**
+ * @summary Create a department
+ */
+
+
+
+export const CreateDepartmentBody = zod.object({
+  "name": zod.string().min(1)
+})
+
+export const CreateDepartmentResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "employeeCount": zod.number().optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a department
+ */
+export const UpdateDepartmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateDepartmentBody = zod.object({
+  "name": zod.string().min(1)
+})
+
+export const UpdateDepartmentResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "employeeCount": zod.number().optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a department
+ */
+export const DeleteDepartmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteDepartmentResponse = zod.void()
+
+
+/**
+ * @summary List department work schedules
+ */
+export const ListDepartmentSchedulesQueryParams = zod.object({
+  "departmentId": zod.coerce.number().nullish()
+})
+
+export const listDepartmentSchedulesResponseDayOfWeekMax = 7;
+
+
+
+export const ListDepartmentSchedulesResponseItem = zod.object({
+  "id": zod.number(),
+  "departmentId": zod.number(),
+  "departmentName": zod.string().nullish(),
+  "dayOfWeek": zod.number().min(1).max(listDepartmentSchedulesResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
+  "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM')
+})
+export const ListDepartmentSchedulesResponse = zod.array(ListDepartmentSchedulesResponseItem)
+
+
+/**
+ * @summary Create or update a department work schedule slot
+ */
+export const upsertDepartmentScheduleBodyDayOfWeekMax = 7;
+
+
+
+export const UpsertDepartmentScheduleBody = zod.object({
+  "departmentId": zod.number(),
+  "dayOfWeek": zod.number().min(1).max(upsertDepartmentScheduleBodyDayOfWeekMax),
+  "startTime": zod.string(),
+  "endTime": zod.string()
+})
+
+export const upsertDepartmentScheduleResponseDayOfWeekMax = 7;
+
+
+
+export const UpsertDepartmentScheduleResponse = zod.object({
+  "id": zod.number(),
+  "departmentId": zod.number(),
+  "departmentName": zod.string().nullish(),
+  "dayOfWeek": zod.number().min(1).max(upsertDepartmentScheduleResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
+  "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM')
+})
+
+
+/**
+ * @summary Delete a department work schedule slot
+ */
+export const DeleteDepartmentScheduleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteDepartmentScheduleResponse = zod.void()
+
+
+/**
  * @summary Get dashboard statistics
  */
 export const GetDashboardSummaryResponse = zod.object({
@@ -829,7 +956,7 @@ export const GetDashboardPresenceResponseItem = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "employeeNumber": zod.string(),
-  "department": zod.string(),
+  "departmentName": zod.string(),
   "position": zod.string(),
   "photoUrl": zod.string().nullish(),
   "status": zod.string(),

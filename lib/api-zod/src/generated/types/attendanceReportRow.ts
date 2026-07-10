@@ -12,7 +12,7 @@ export interface AttendanceReportRow {
   employeeNumber: string;
   /** @nullable */
   employeePhotoUrl?: string | null;
-  department: string;
+  departmentName: string;
   position: string;
   daysPresent: number;
   daysAbsent: number;

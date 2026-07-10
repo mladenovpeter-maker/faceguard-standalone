@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Activity, Users, ShieldCheck, Map, Clock, Video, MonitorPlay, CalendarOff, LogOut, KeyRound, ChevronDown, UserCircle, Database } from "lucide-react";
+import { Activity, Users, ShieldCheck, Map, Clock, Video, MonitorPlay, CalendarOff, LogOut, KeyRound, ChevronDown, UserCircle, Database, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHealthCheck } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
@@ -28,7 +28,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/", label: "Табло", icon: Activity },
     { href: "/recognitions", label: "Лог на събития", icon: MonitorPlay },
     { href: "/employees", label: "Персонал", icon: Users },
+    { href: "/departments", label: "Отдели", icon: Building2 },
     { href: "/attendance", label: "Присъствие", icon: Clock },
+    { href: "/department-schedules", label: "Работно време", icon: Clock },
     { href: "/leaves", label: "Отпуски", icon: CalendarOff },
     { href: "/access-rules", label: "Контрол на достъп", icon: ShieldCheck },
     { href: "/cameras", label: "Камери", icon: Video },

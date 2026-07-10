@@ -11,7 +11,7 @@ export interface EmployeePresence {
   firstName: string;
   lastName: string;
   employeeNumber: string;
-  department: string;
+  departmentName: string;
   position: string;
   /** @nullable */
   photoUrl?: string | null;

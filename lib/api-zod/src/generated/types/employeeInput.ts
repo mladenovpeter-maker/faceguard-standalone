@@ -13,7 +13,7 @@ export interface EmployeeInput {
   lastName: string;
   /** @minLength 1 */
   employeeNumber: string;
-  department: string;
+  departmentId: number;
   position: string;
   email?: string;
   phone?: string;

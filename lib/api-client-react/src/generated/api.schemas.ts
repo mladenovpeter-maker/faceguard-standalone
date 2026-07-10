@@ -40,7 +40,8 @@ export interface Employee {
   firstName: string;
   lastName: string;
   employeeNumber: string;
-  department: string;
+  departmentId: number;
+  departmentName: string;
   position: string;
   /** @nullable */
   email?: string | null;
@@ -61,7 +62,7 @@ export interface EmployeeInput {
   lastName: string;
   /** @minLength 1 */
   employeeNumber: string;
-  department: string;
+  departmentId: number;
   position: string;
   email?: string;
   phone?: string;
@@ -79,7 +80,7 @@ export const EmployeeUpdateStatus = {
 export interface EmployeeUpdate {
   firstName?: string;
   lastName?: string;
-  department?: string;
+  departmentId?: number;
   position?: string;
   /** @nullable */
   email?: string | null;
@@ -88,6 +89,46 @@ export interface EmployeeUpdate {
   status?: EmployeeUpdateStatus;
   /** @nullable */
   hiredAt?: string | null;
+}
+
+export interface Department {
+  id: number;
+  name: string;
+  employeeCount?: number;
+  createdAt: string;
+}
+
+export interface DepartmentInput {
+  /** @minLength 1 */
+  name: string;
+}
+
+export interface DepartmentWorkSchedule {
+  id: number;
+  departmentId: number;
+  /** @nullable */
+  departmentName?: string | null;
+  /**
+     * 1=Monday, 2=Tuesday, ... 7=Sunday (ISO)
+     * @minimum 1
+     * @maximum 7
+     */
+  dayOfWeek: number;
+  /** HH:MM */
+  startTime: string;
+  /** HH:MM */
+  endTime: string;
+}
+
+export interface DepartmentWorkScheduleInput {
+  departmentId: number;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
 }
 
 export interface PhotoUpload {
@@ -355,7 +396,7 @@ export interface AttendanceReportRow {
   employeeNumber: string;
   /** @nullable */
   employeePhotoUrl?: string | null;
-  department: string;
+  departmentName: string;
   position: string;
   daysPresent: number;
   daysAbsent: number;
@@ -424,7 +465,7 @@ export interface AbsentRecord {
   employeeNumber: string;
   /** @nullable */
   employeePhotoUrl?: string | null;
-  department?: string;
+  departmentName?: string;
   position?: string;
   /** @nullable */
   leaveId?: number | null;
@@ -477,7 +518,7 @@ export interface LeaveRecord {
   /** @nullable */
   employeePhotoUrl?: string | null;
   /** @nullable */
-  department?: string | null;
+  departmentName?: string | null;
   type: LeaveRecordType;
   startDate: string;
   endDate: string;
@@ -571,7 +612,7 @@ export interface EmployeePresence {
   firstName: string;
   lastName: string;
   employeeNumber: string;
-  department: string;
+  departmentName: string;
   position: string;
   /** @nullable */
   photoUrl?: string | null;
@@ -657,7 +698,7 @@ employeeId?: number | null;
 /**
  * @nullable
  */
-department?: string | null;
+departmentId?: number | null;
 };
 
 export type ListLeavesParams = {
@@ -689,5 +730,12 @@ export type ListZoneSchedulesParams = {
  * @nullable
  */
 zoneId?: number | null;
+};
+
+export type ListDepartmentSchedulesParams = {
+/**
+ * @nullable
+ */
+departmentId?: number | null;
 };
 

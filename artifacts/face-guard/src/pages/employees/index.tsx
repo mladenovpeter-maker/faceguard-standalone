@@ -1,4 +1,4 @@
-import { useListEmployees, useDeleteEmployee, useUpdateEmployee, getListEmployeesQueryKey } from "@workspace/api-client-react";
+import { useListEmployees, useDeleteEmployee, useUpdateEmployee, useListDepartments, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Plus, Search, User, Trash2, Pencil } from "lucide-react";
@@ -21,19 +21,20 @@ const editSchema = z.object({
   firstName: z.string().min(1, "Задължително"),
   lastName: z.string().min(1, "Задължително"),
   employeeNumber: z.string().min(1, "Задължително"),
-  department: z.string().min(1, "Задължително"),
+  departmentId: z.coerce.number().min(1, "Изберете отдел"),
   position: z.string().min(1, "Задължително"),
   email: z.string().email("Невалиден имейл").optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
   status: z.enum(["active", "inactive"]),
 });
 
-type EditEmployee = { id: number; firstName: string; lastName: string; employeeNumber: string; department: string; position: string; email?: string | null; phone?: string | null; status: "active" | "inactive" };
+type EditEmployee = { id: number; firstName: string; lastName: string; employeeNumber: string; departmentId: number | null; position: string; email?: string | null; phone?: string | null; status: "active" | "inactive" };
 
 export default function EmployeeList() {
   const [search, setSearch] = useState("");
   const [editTarget, setEditTarget] = useState<EditEmployee | null>(null);
   const { data: employees, isLoading } = useListEmployees({ search: search || undefined });
+  const { data: departments = [] } = useListDepartments();
   const deleteEmployee = useDeleteEmployee();
   const updateEmployee = useUpdateEmployee();
   const queryClient = useQueryClient();
@@ -45,7 +46,7 @@ export default function EmployeeList() {
       firstName: editTarget.firstName,
       lastName: editTarget.lastName,
       employeeNumber: editTarget.employeeNumber,
-      department: editTarget.department ?? "",
+      departmentId: editTarget.departmentId ?? 0,
       position: editTarget.position ?? "",
       email: editTarget.email ?? "",
       phone: editTarget.phone ?? "",
@@ -98,8 +99,19 @@ export default function EmployeeList() {
               <FormField control={form.control} name="employeeNumber" render={({ field }) => (
                 <FormItem><FormLabel>Служебен номер</FormLabel><FormControl><Input className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              <FormField control={form.control} name="department" render={({ field }) => (
-                <FormItem><FormLabel>Отдел</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              <FormField control={form.control} name="departmentId" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Отдел</FormLabel>
+                  <Select value={field.value ? String(field.value) : ""} onValueChange={(v) => field.onChange(Number(v))}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Изберете отдел" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {departments.map((d) => (
+                        <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               )} />
               <FormField control={form.control} name="position" render={({ field }) => (
                 <FormItem><FormLabel>Длъжност</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -146,7 +158,7 @@ export default function EmployeeList() {
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Търсене по име, номер или отдел..."
+            placeholder="Търсене по име или номер..."
             className="pl-9 font-mono bg-background"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -200,7 +212,7 @@ export default function EmployeeList() {
                     </TableCell>
                     <TableCell className="font-medium">{fullName}</TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">{employee.employeeNumber}</TableCell>
-                    <TableCell>{employee.department}</TableCell>
+                    <TableCell>{employee.departmentName ?? "—"}</TableCell>
                     <TableCell>{employee.position}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={employee.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-muted text-muted-foreground'}>
@@ -213,7 +225,7 @@ export default function EmployeeList() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={(e) => openEdit({ id: employee.id, firstName: employee.firstName, lastName: employee.lastName, employeeNumber: employee.employeeNumber, department: employee.department ?? "", position: employee.position ?? "", email: employee.email, phone: employee.phone, status: employee.status as "active" | "inactive" }, e)}
+                        onClick={(e) => openEdit({ id: employee.id, firstName: employee.firstName, lastName: employee.lastName, employeeNumber: employee.employeeNumber, departmentId: employee.departmentId ?? null, position: employee.position ?? "", email: employee.email, phone: employee.phone, status: employee.status as "active" | "inactive" }, e)}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>

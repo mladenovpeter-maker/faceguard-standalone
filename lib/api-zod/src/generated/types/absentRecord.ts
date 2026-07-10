@@ -13,7 +13,7 @@ export interface AbsentRecord {
   employeeNumber: string;
   /** @nullable */
   employeePhotoUrl?: string | null;
-  department?: string;
+  departmentName?: string;
   position?: string;
   /** @nullable */
   leaveId?: number | null;

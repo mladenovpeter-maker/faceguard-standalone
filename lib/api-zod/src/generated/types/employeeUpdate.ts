@@ -10,7 +10,7 @@ import type { EmployeeUpdateStatus } from './employeeUpdateStatus';
 export interface EmployeeUpdate {
   firstName?: string;
   lastName?: string;
-  department?: string;
+  departmentId?: number;
   position?: string;
   /** @nullable */
   email?: string | null;

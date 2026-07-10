@@ -29,6 +29,10 @@ import type {
   CameraTestResult,
   CameraUpdate,
   DashboardSummary,
+  Department,
+  DepartmentInput,
+  DepartmentWorkSchedule,
+  DepartmentWorkScheduleInput,
   Employee,
   EmployeeInput,
   EmployeePresence,
@@ -39,6 +43,7 @@ import type {
   LeaveInput,
   LeaveRecord,
   ListAttendanceParams,
+  ListDepartmentSchedulesParams,
   ListEmployeesParams,
   ListLeavesParams,
   ListRecognitionsParams,
@@ -2534,6 +2539,518 @@ export const useDeleteZoneSchedule = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteZoneScheduleMutationOptions(options));
+    }
+
+export const getListDepartmentsUrl = () => {
+
+
+
+
+  return `/api/departments`
+}
+
+/**
+ * @summary List all departments
+ */
+export const listDepartments = async ( options?: RequestInit): Promise<Department[]> => {
+
+  return customFetch<Department[]>(getListDepartmentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDepartmentsQueryKey = () => {
+    return [
+    `/api/departments`
+    ] as const;
+    }
+
+
+export const getListDepartmentsQueryOptions = <TData = Awaited<ReturnType<typeof listDepartments>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDepartmentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDepartments>>> = ({ signal }) => listDepartments({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDepartmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listDepartments>>>
+export type ListDepartmentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all departments
+ */
+
+export function useListDepartments<TData = Awaited<ReturnType<typeof listDepartments>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDepartments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDepartmentsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateDepartmentUrl = () => {
+
+
+
+
+  return `/api/departments`
+}
+
+/**
+ * @summary Create a department
+ */
+export const createDepartment = async (departmentInput: DepartmentInput, options?: RequestInit): Promise<Department> => {
+
+  return customFetch<Department>(getCreateDepartmentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(departmentInput)
+  }
+);}
+
+
+
+
+export const getCreateDepartmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDepartment>>, TError,{data: BodyType<DepartmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDepartment>>, TError,{data: BodyType<DepartmentInput>}, TContext> => {
+
+const mutationKey = ['createDepartment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDepartment>>, {data: BodyType<DepartmentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createDepartment(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDepartmentMutationResult = NonNullable<Awaited<ReturnType<typeof createDepartment>>>
+    export type CreateDepartmentMutationBody = BodyType<DepartmentInput>
+    export type CreateDepartmentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a department
+ */
+export const useCreateDepartment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDepartment>>, TError,{data: BodyType<DepartmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDepartment>>,
+        TError,
+        {data: BodyType<DepartmentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateDepartmentMutationOptions(options));
+    }
+
+export const getUpdateDepartmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/departments/${id}`
+}
+
+/**
+ * @summary Update a department
+ */
+export const updateDepartment = async (id: number,
+    departmentInput: DepartmentInput, options?: RequestInit): Promise<Department> => {
+
+  return customFetch<Department>(getUpdateDepartmentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(departmentInput)
+  }
+);}
+
+
+
+
+export const getUpdateDepartmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDepartment>>, TError,{id: number;data: BodyType<DepartmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDepartment>>, TError,{id: number;data: BodyType<DepartmentInput>}, TContext> => {
+
+const mutationKey = ['updateDepartment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDepartment>>, {id: number;data: BodyType<DepartmentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDepartment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDepartmentMutationResult = NonNullable<Awaited<ReturnType<typeof updateDepartment>>>
+    export type UpdateDepartmentMutationBody = BodyType<DepartmentInput>
+    export type UpdateDepartmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a department
+ */
+export const useUpdateDepartment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDepartment>>, TError,{id: number;data: BodyType<DepartmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDepartment>>,
+        TError,
+        {id: number;data: BodyType<DepartmentInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateDepartmentMutationOptions(options));
+    }
+
+export const getDeleteDepartmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/departments/${id}`
+}
+
+/**
+ * @summary Delete a department
+ */
+export const deleteDepartment = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteDepartmentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteDepartmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDepartment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDepartment>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteDepartment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDepartment>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteDepartment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDepartmentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDepartment>>>
+
+    export type DeleteDepartmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a department
+ */
+export const useDeleteDepartment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDepartment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDepartment>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteDepartmentMutationOptions(options));
+    }
+
+export const getListDepartmentSchedulesUrl = (params?: ListDepartmentSchedulesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/department-schedules?${stringifiedParams}` : `/api/department-schedules`
+}
+
+/**
+ * @summary List department work schedules
+ */
+export const listDepartmentSchedules = async (params?: ListDepartmentSchedulesParams, options?: RequestInit): Promise<DepartmentWorkSchedule[]> => {
+
+  return customFetch<DepartmentWorkSchedule[]>(getListDepartmentSchedulesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDepartmentSchedulesQueryKey = (params?: ListDepartmentSchedulesParams,) => {
+    return [
+    `/api/department-schedules`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDepartmentSchedulesQueryOptions = <TData = Awaited<ReturnType<typeof listDepartmentSchedules>>, TError = ErrorType<unknown>>(params?: ListDepartmentSchedulesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDepartmentSchedules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDepartmentSchedulesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDepartmentSchedules>>> = ({ signal }) => listDepartmentSchedules(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDepartmentSchedules>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDepartmentSchedulesQueryResult = NonNullable<Awaited<ReturnType<typeof listDepartmentSchedules>>>
+export type ListDepartmentSchedulesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List department work schedules
+ */
+
+export function useListDepartmentSchedules<TData = Awaited<ReturnType<typeof listDepartmentSchedules>>, TError = ErrorType<unknown>>(
+ params?: ListDepartmentSchedulesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDepartmentSchedules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDepartmentSchedulesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpsertDepartmentScheduleUrl = () => {
+
+
+
+
+  return `/api/department-schedules`
+}
+
+/**
+ * @summary Create or update a department work schedule slot
+ */
+export const upsertDepartmentSchedule = async (departmentWorkScheduleInput: DepartmentWorkScheduleInput, options?: RequestInit): Promise<DepartmentWorkSchedule> => {
+
+  return customFetch<DepartmentWorkSchedule>(getUpsertDepartmentScheduleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(departmentWorkScheduleInput)
+  }
+);}
+
+
+
+
+export const getUpsertDepartmentScheduleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertDepartmentSchedule>>, TError,{data: BodyType<DepartmentWorkScheduleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertDepartmentSchedule>>, TError,{data: BodyType<DepartmentWorkScheduleInput>}, TContext> => {
+
+const mutationKey = ['upsertDepartmentSchedule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertDepartmentSchedule>>, {data: BodyType<DepartmentWorkScheduleInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  upsertDepartmentSchedule(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertDepartmentScheduleMutationResult = NonNullable<Awaited<ReturnType<typeof upsertDepartmentSchedule>>>
+    export type UpsertDepartmentScheduleMutationBody = BodyType<DepartmentWorkScheduleInput>
+    export type UpsertDepartmentScheduleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create or update a department work schedule slot
+ */
+export const useUpsertDepartmentSchedule = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertDepartmentSchedule>>, TError,{data: BodyType<DepartmentWorkScheduleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertDepartmentSchedule>>,
+        TError,
+        {data: BodyType<DepartmentWorkScheduleInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertDepartmentScheduleMutationOptions(options));
+    }
+
+export const getDeleteDepartmentScheduleUrl = (id: number,) => {
+
+
+
+
+  return `/api/department-schedules/${id}`
+}
+
+/**
+ * @summary Delete a department work schedule slot
+ */
+export const deleteDepartmentSchedule = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteDepartmentScheduleUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteDepartmentScheduleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDepartmentSchedule>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDepartmentSchedule>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteDepartmentSchedule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDepartmentSchedule>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteDepartmentSchedule(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDepartmentScheduleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDepartmentSchedule>>>
+
+    export type DeleteDepartmentScheduleMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a department work schedule slot
+ */
+export const useDeleteDepartmentSchedule = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDepartmentSchedule>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDepartmentSchedule>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteDepartmentScheduleMutationOptions(options));
     }
 
 export const getGetDashboardSummaryUrl = () => {

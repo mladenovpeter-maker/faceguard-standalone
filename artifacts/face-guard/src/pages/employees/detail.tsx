@@ -1,4 +1,4 @@
-import { useGetEmployee, useUpdateEmployee, useDeleteEmployee, useListRecognitions, getListEmployeesQueryKey } from "@workspace/api-client-react";
+import { useGetEmployee, useUpdateEmployee, useDeleteEmployee, useListRecognitions, useListDepartments, getListEmployeesQueryKey } from "@workspace/api-client-react";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, User, Phone, Mail, Building, Briefcase, Calendar, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,7 +22,7 @@ const editSchema = z.object({
   firstName: z.string().min(1, "Задължително"),
   lastName: z.string().min(1, "Задължително"),
   employeeNumber: z.string().min(1, "Задължително"),
-  department: z.string().min(1, "Задължително"),
+  departmentId: z.coerce.number().min(1, "Изберете отдел"),
   position: z.string().min(1, "Задължително"),
   email: z.string().email("Невалиден имейл").optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
@@ -37,6 +38,7 @@ export default function EmployeeDetail() {
 
   const { data: employee, isLoading: loadingEmp, refetch } = useGetEmployee(employeeId, { query: { enabled: !!employeeId } });
   const { data: recognitions, isLoading: loadingRec } = useListRecognitions({ employeeId, limit: 10 }, { query: { enabled: !!employeeId } });
+  const { data: departments = [] } = useListDepartments();
   const updateEmployee = useUpdateEmployee();
   const deleteEmployee = useDeleteEmployee();
 
@@ -46,7 +48,7 @@ export default function EmployeeDetail() {
       firstName: employee.firstName,
       lastName: employee.lastName,
       employeeNumber: employee.employeeNumber,
-      department: employee.department ?? "",
+      departmentId: employee.departmentId ?? undefined,
       position: employee.position ?? "",
       email: employee.email ?? "",
       phone: employee.phone ?? "",
@@ -132,8 +134,19 @@ export default function EmployeeDetail() {
               <FormField control={form.control} name="employeeNumber" render={({ field }) => (
                 <FormItem><FormLabel>Служебен номер</FormLabel><FormControl><Input className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              <FormField control={form.control} name="department" render={({ field }) => (
-                <FormItem><FormLabel>Отдел</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              <FormField control={form.control} name="departmentId" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Отдел</FormLabel>
+                  <Select value={field.value ? String(field.value) : ""} onValueChange={(v) => field.onChange(Number(v))}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Изберете отдел" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {departments.map((d) => (
+                        <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               )} />
               <FormField control={form.control} name="position" render={({ field }) => (
                 <FormItem><FormLabel>Длъжност</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -171,7 +184,7 @@ export default function EmployeeDetail() {
             <div className="w-full space-y-3 text-sm text-left">
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Building className="h-4 w-4 shrink-0" />
-                <span className="text-foreground">{employee.department}</span>
+                <span className="text-foreground">{employee.departmentName ?? "—"}</span>
               </div>
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Briefcase className="h-4 w-4 shrink-0" />

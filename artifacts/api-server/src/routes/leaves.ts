@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lte, or, sql } from "drizzle-orm";
-import { db, leavesTable, employeesTable } from "@workspace/db";
+import { db, leavesTable, employeesTable, departmentsTable } from "@workspace/db";
 import {
   ListLeavesQueryParams,
   ListLeavesResponse,
@@ -21,7 +21,7 @@ const selectLeaveWithJoins = async (conditions?: any) => {
       employeeName: sql<string | null>`concat(${employeesTable.firstName}, ' ', ${employeesTable.lastName})`,
       employeeNumber: employeesTable.employeeNumber,
       employeePhotoUrl: employeesTable.photoUrl,
-      department: employeesTable.department,
+      departmentName: departmentsTable.name,
       type: leavesTable.type,
       startDate: leavesTable.startDate,
       endDate: leavesTable.endDate,
@@ -32,6 +32,7 @@ const selectLeaveWithJoins = async (conditions?: any) => {
     })
     .from(leavesTable)
     .leftJoin(employeesTable, eq(employeesTable.id, leavesTable.employeeId))
+    .leftJoin(departmentsTable, eq(departmentsTable.id, employeesTable.departmentId))
     .where(conditions)
     .orderBy(leavesTable.startDate);
 

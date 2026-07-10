@@ -28,6 +28,10 @@ tags:
     description: Employee leave management
   - name: zone-schedules
     description: Zone work schedule management
+  - name: departments
+    description: Department management
+  - name: department-schedules
+    description: Per-department work schedule management
 
 paths:
   /healthz:
@@ -530,10 +534,10 @@ paths:
           in: query
           schema:
             type: ["integer", "null"]
-        - name: department
+        - name: departmentId
           in: query
           schema:
-            type: ["string", "null"]
+            type: ["integer", "null"]
       responses:
         "200":
           description: Attendance report
@@ -717,6 +721,138 @@ paths:
         "404":
           description: Not found
 
+  # DEPARTMENTS
+  /departments:
+    get:
+      operationId: listDepartments
+      tags: [departments]
+      summary: List all departments
+      responses:
+        "200":
+          description: List of departments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Department"
+    post:
+      operationId: createDepartment
+      tags: [departments]
+      summary: Create a department
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+
+  /departments/{id}:
+    patch:
+      operationId: updateDepartment
+      tags: [departments]
+      summary: Update a department
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteDepartment
+      tags: [departments]
+      summary: Delete a department
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+        "409":
+          description: Department has assigned employees
+
+  # DEPARTMENT WORK SCHEDULES
+  /department-schedules:
+    get:
+      operationId: listDepartmentSchedules
+      tags: [department-schedules]
+      summary: List department work schedules
+      parameters:
+        - name: departmentId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Department schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DepartmentWorkSchedule"
+    post:
+      operationId: upsertDepartmentSchedule
+      tags: [department-schedules]
+      summary: Create or update a department work schedule slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentWorkScheduleInput"
+      responses:
+        "200":
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepartmentWorkSchedule"
+
+  /department-schedules/{id}:
+    delete:
+      operationId: deleteDepartmentSchedule
+      tags: [department-schedules]
+      summary: Delete a department work schedule slot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
   # DASHBOARD
   /dashboard/summary:
     get:
@@ -793,7 +929,7 @@ components:
 
     Employee:
       type: object
-      required: [id, firstName, lastName, employeeNumber, department, position, status, createdAt]
+      required: [id, firstName, lastName, employeeNumber, departmentId, departmentName, position, status, createdAt]
       properties:
         id:
           type: integer
@@ -803,7 +939,9 @@ components:
           type: string
         employeeNumber:
           type: string
-        department:
+        departmentId:
+          type: integer
+        departmentName:
           type: string
         position:
           type: string
@@ -825,7 +963,7 @@ components:
 
     EmployeeInput:
       type: object
-      required: [firstName, lastName, employeeNumber, department, position]
+      required: [firstName, lastName, employeeNumber, departmentId, position]
       properties:
         firstName:
           type: string
@@ -836,8 +974,8 @@ components:
         employeeNumber:
           type: string
           minLength: 1
-        department:
-          type: string
+        departmentId:
+          type: integer
         position:
           type: string
         email:
@@ -855,8 +993,8 @@ components:
           type: string
         lastName:
           type: string
-        department:
-          type: string
+        departmentId:
+          type: integer
         position:
           type: string
         email:
@@ -869,6 +1007,65 @@ components:
         hiredAt:
           type: ["string", "null"]
           format: date
+
+    Department:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        employeeCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    DepartmentInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+
+    DepartmentWorkSchedule:
+      type: object
+      required: [id, departmentId, dayOfWeek, startTime, endTime]
+      properties:
+        id:
+          type: integer
+        departmentId:
+          type: integer
+        departmentName:
+          type: ["string", "null"]
+        dayOfWeek:
+          type: integer
+          description: 1=Monday, 2=Tuesday, ... 7=Sunday (ISO)
+          minimum: 1
+          maximum: 7
+        startTime:
+          type: string
+          description: "HH:MM"
+        endTime:
+          type: string
+          description: "HH:MM"
+
+    DepartmentWorkScheduleInput:
+      type: object
+      required: [departmentId, dayOfWeek, startTime, endTime]
+      properties:
+        departmentId:
+          type: integer
+        dayOfWeek:
+          type: integer
+          minimum: 1
+          maximum: 7
+        startTime:
+          type: string
+        endTime:
+          type: string
 
     PhotoUpload:
       type: object
@@ -1102,7 +1299,7 @@ components:
 
     AttendanceReportRow:
       type: object
-      required: [employeeId, employeeName, employeeNumber, department, position, daysPresent, daysAbsent, daysOnLeave, totalMinutes]
+      required: [employeeId, employeeName, employeeNumber, departmentName, position, daysPresent, daysAbsent, daysOnLeave, totalMinutes]
       properties:
         employeeId:
           type: integer
@@ -1112,7 +1309,7 @@ components:
           type: string
         employeePhotoUrl:
           type: ["string", "null"]
-        department:
+        departmentName:
           type: string
         position:
           type: string
@@ -1226,7 +1423,7 @@ components:
           type: string
         employeePhotoUrl:
           type: ["string", "null"]
-        department:
+        departmentName:
           type: string
         position:
           type: string
@@ -1258,7 +1455,7 @@ components:
           type: ["string", "null"]
         employeePhotoUrl:
           type: ["string", "null"]
-        department:
+        departmentName:
           type: ["string", "null"]
         type:
           type: string
@@ -1379,7 +1576,7 @@ components:
 
     EmployeePresence:
       type: object
-      required: [id, firstName, lastName, employeeNumber, department, position, status, present, onLeave]
+      required: [id, firstName, lastName, employeeNumber, departmentName, position, status, present, onLeave]
       properties:
         id:
           type: integer
@@ -1389,7 +1586,7 @@ components:
           type: string
         employeeNumber:
           type: string
-        department:
+        departmentName:
           type: string
         position:
           type: string

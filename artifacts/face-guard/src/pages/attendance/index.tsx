@@ -105,7 +105,7 @@ function PresentCard({ row }: { row: AttendanceReportRow }) {
         <Avatar name={row.employeeName} photo={row.employeePhotoUrl} />
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate">{row.employeeName}</p>
-          <p className="text-xs text-muted-foreground font-mono">{row.employeeNumber} · {row.department}</p>
+          <p className="text-xs text-muted-foreground font-mono">{row.employeeNumber} · {row.departmentName}</p>
         </div>
         <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse shrink-0" />
       </div>
@@ -155,7 +155,7 @@ function LeaveCard({ row }: { row: AttendanceReportRow }) {
       <Avatar name={row.employeeName} photo={row.employeePhotoUrl} />
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-sm truncate">{row.employeeName}</p>
-        <p className="text-xs text-muted-foreground font-mono">{row.employeeNumber} · {row.department}</p>
+        <p className="text-xs text-muted-foreground font-mono">{row.employeeNumber} · {row.departmentName}</p>
       </div>
       <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold shrink-0", meta.color)}>
         <meta.Icon className="h-3 w-3" />
@@ -212,7 +212,7 @@ function SingleDayView({ rows }: { rows: AttendanceReportRow[] }) {
                   <Avatar name={r.employeeName} photo={r.employeePhotoUrl} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{r.employeeName}</p>
-                    <p className="text-xs text-muted-foreground font-mono">{r.department} · {r.position}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{r.departmentName} · {r.position}</p>
                   </div>
                   <Badge variant="outline" className="text-xs text-red-400 border-red-400/30 bg-red-500/5 shrink-0">
                     Отсъстващ
@@ -279,7 +279,7 @@ function MultiDayTable({ rows, workingDays }: { rows: AttendanceReportRow[]; wor
                       <Avatar name={r.employeeName} photo={r.employeePhotoUrl} size="sm" />
                       <div>
                         <p className="font-semibold text-foreground leading-tight">{r.employeeName}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{r.department}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{r.departmentName}</p>
                       </div>
                     </div>
                   </td>
@@ -353,14 +353,14 @@ export default function AttendancePage() {
   const { data: report, isLoading } = useGetAttendanceReport({ from, to });
 
   const departments = useMemo(
-    () => Array.from(new Set((report?.rows ?? []).map(r => r.department).filter(Boolean))).sort() as string[],
+    () => Array.from(new Set((report?.rows ?? []).map(r => r.departmentName).filter(Boolean))).sort() as string[],
     [report]
   );
 
   const rows: AttendanceReportRow[] = useMemo(() => {
     if (!report) return [];
     return report.rows.filter(r => {
-      if (dept !== "all" && r.department !== dept) return false;
+      if (dept !== "all" && r.departmentName !== dept) return false;
       if (search) {
         const q = search.toLowerCase();
         return r.employeeName.toLowerCase().includes(q) || r.employeeNumber.toLowerCase().includes(q);

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, sql, lte, gte } from "drizzle-orm";
-import { db, attendanceTable, employeesTable, zonesTable, leavesTable } from "@workspace/db";
+import { db, attendanceTable, employeesTable, zonesTable, leavesTable, departmentsTable } from "@workspace/db";
 import {
   ListAttendanceQueryParams,
   ListAttendanceResponse,
@@ -126,10 +126,11 @@ router.get("/attendance/today", async (_req, res): Promise<void> => {
       lastName: employeesTable.lastName,
       employeeNumber: employeesTable.employeeNumber,
       photoUrl: employeesTable.photoUrl,
-      department: employeesTable.department,
+      departmentName: departmentsTable.name,
       position: employeesTable.position,
     })
     .from(employeesTable)
+    .leftJoin(departmentsTable, eq(departmentsTable.id, employeesTable.departmentId))
     .where(eq(employeesTable.status, "active"));
 
   const activeLeaves = await db
@@ -154,7 +155,7 @@ router.get("/attendance/today", async (_req, res): Promise<void> => {
         employeeName: `${emp.firstName} ${emp.lastName}`,
         employeeNumber: emp.employeeNumber,
         employeePhotoUrl: emp.photoUrl,
-        department: emp.department,
+        departmentName: emp.departmentName ?? "",
         position: emp.position,
         leaveId: leave?.id ?? null,
         leaveType: leave?.type ?? null,
@@ -181,7 +182,7 @@ router.get("/attendance/today", async (_req, res): Promise<void> => {
 });
 
 router.get("/attendance/report", async (req, res): Promise<void> => {
-  const { from, to, employeeId, department } = req.query as Record<string, string | undefined>;
+  const { from, to, employeeId, departmentId } = req.query as Record<string, string | undefined>;
 
   if (!from || !to) {
     res.status(400).json({ error: "from и to са задължителни" });
@@ -190,12 +191,21 @@ router.get("/attendance/report", async (req, res): Promise<void> => {
 
   // All active employees (optionally filtered)
   const empConditions: ReturnType<typeof eq>[] = [eq(employeesTable.status, "active")];
-  if (department) empConditions.push(eq(employeesTable.department, department));
+  if (departmentId) empConditions.push(eq(employeesTable.departmentId, Number(departmentId)));
   if (employeeId) empConditions.push(eq(employeesTable.id, Number(employeeId)));
 
   const allEmployees = await db
-    .select()
+    .select({
+      id: employeesTable.id,
+      firstName: employeesTable.firstName,
+      lastName: employeesTable.lastName,
+      employeeNumber: employeesTable.employeeNumber,
+      photoUrl: employeesTable.photoUrl,
+      departmentName: departmentsTable.name,
+      position: employeesTable.position,
+    })
     .from(employeesTable)
+    .leftJoin(departmentsTable, eq(departmentsTable.id, employeesTable.departmentId))
     .where(and(...empConditions));
 
   const empIds = allEmployees.map((e) => e.id);
@@ -272,7 +282,7 @@ router.get("/attendance/report", async (req, res): Promise<void> => {
       employeeName:     `${emp.firstName} ${emp.lastName}`,
       employeeNumber:   emp.employeeNumber,
       employeePhotoUrl: emp.photoUrl ?? null,
-      department:       emp.department ?? "",
+      departmentName:   emp.departmentName ?? "",
       position:         emp.position ?? "",
       daysPresent,
       daysAbsent,

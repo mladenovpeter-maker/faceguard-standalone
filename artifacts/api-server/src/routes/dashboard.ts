@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, gte, sql, and, lte } from "drizzle-orm";
-import { db, employeesTable, camerasTable, zonesTable, recognitionEventsTable, attendanceTable, leavesTable } from "@workspace/db";
+import { db, employeesTable, camerasTable, zonesTable, recognitionEventsTable, attendanceTable, leavesTable, departmentsTable } from "@workspace/db";
 import {
   GetDashboardSummaryResponse,
   GetRecentEventsResponse,
@@ -119,7 +119,7 @@ router.get("/dashboard/presence", async (_req, res): Promise<void> => {
       firstName: employeesTable.firstName,
       lastName: employeesTable.lastName,
       employeeNumber: employeesTable.employeeNumber,
-      department: employeesTable.department,
+      departmentName: departmentsTable.name,
       position: employeesTable.position,
       photoUrl: employeesTable.photoUrl,
       status: employeesTable.status,
@@ -129,6 +129,7 @@ router.get("/dashboard/presence", async (_req, res): Promise<void> => {
       leaveType: leavesTable.type,
     })
     .from(employeesTable)
+    .leftJoin(departmentsTable, eq(departmentsTable.id, employeesTable.departmentId))
     .leftJoin(
       attendanceTable,
       and(

@@ -1,1 +1,2 @@
 - [Session cookies behind Replit proxy](session-cookies-replit-proxy.md) — express-session `secure` cookies need `app.set("trust proxy", 1)` or they're silently never set/sent.
+- [Zod version in face-guard is v3](zod-v3-error-param.md) — `{ error: "..." }` param syntax is zod v4-only and fails typecheck; use `required_error`/plain `.min()` message instead.

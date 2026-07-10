@@ -18,7 +18,7 @@ export interface LeaveRecord {
   /** @nullable */
   employeePhotoUrl?: string | null;
   /** @nullable */
-  department?: string | null;
+  departmentName?: string | null;
   type: LeaveRecordType;
   startDate: Date;
   endDate: Date;
