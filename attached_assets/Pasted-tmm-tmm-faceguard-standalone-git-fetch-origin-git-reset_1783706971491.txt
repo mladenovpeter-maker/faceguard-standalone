@@ -1,0 +1,80 @@
+tmm@tmm:~/faceguard-standalone$ git fetch origin && git reset --hard origin/main
+docker compose -f selfhost/docker-compose.yml --env-file selfhost/.env up --build -d
+remote: Enumerating objects: 12, done.
+remote: Counting objects: 100% (12/12), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 8 (delta 5), reused 8 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 2.69 KiB | 393.00 KiB/s, done.
+From https://github.com/mladenovpeter-maker/faceguard-standalone
+   e52846d..32b4591  main       -> origin/main
+HEAD is now at 32b4591 Move onlyBuiltDependencies to pnpm-workspace.yaml (package.json pnpm field is no longer read)
+WARN[0000] Docker Compose is configured to build using Bake, but buildx isn't installed 
+[+] Building 18.9s (13/21)                                                                          docker:default
+ => [api-server internal] load build definition from Dockerfile.api-server                                    0.0s
+ => => transferring dockerfile: 1.72kB                                                                        0.0s
+ => [api-server internal] load metadata for docker.io/library/node:24-bookworm-slim                           0.0s
+ => [api-server internal] load .dockerignore                                                                  0.0s
+ => => transferring context: 2B                                                                               0.0s
+ => [api-server build  1/12] FROM docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c  0.0s
+ => => resolve docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c29e27bf9befc8f5a26c  0.0s
+ => [api-server internal] load build context                                                                  0.0s
+ => => transferring context: 18.00kB                                                                          0.0s
+ => CACHED [api-server build  2/12] RUN corepack enable && corepack prepare pnpm@latest --activate            0.0s
+ => CACHED [api-server build  3/12] RUN apt-get update && apt-get install -y --no-install-recommends     pyt  0.0s
+ => CACHED [api-server build  4/12] WORKDIR /repo                                                             0.0s
+ => [api-server build  5/12] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* ./                 0.1s
+ => [api-server build  6/12] COPY lib ./lib                                                                   0.1s
+ => [api-server build  7/12] COPY artifacts/api-server ./artifacts/api-server                                 0.1s
+ => [api-server build  8/12] COPY scripts ./scripts                                                           0.1s
+ => ERROR [api-server build  9/12] RUN pnpm install --frozen-lockfile || pnpm install                        18.4s
+------                                                                                                             
+ > [api-server build  9/12] RUN pnpm install --frozen-lockfile || pnpm install:                                    
+0.961 Scope: all 7 workspace projects                                                                              
+1.086 ? Verifying lockfile against supply-chain policies (569 entries)...                                          
+1.095 Lockfile is up to date, resolution step is skipped                                                           
+1.190 Progress: resolved 1, reused 0, downloaded 0, added 0                                                        
+1.233 Packages: +336
+1.233 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2.192 Progress: resolved 336, reused 0, downloaded 49, added 49
+3.192 Progress: resolved 336, reused 0, downloaded 114, added 113
+4.192 Progress: resolved 336, reused 0, downloaded 206, added 206
+5.193 Progress: resolved 336, reused 0, downloaded 251, added 251
+6.193 Progress: resolved 336, reused 0, downloaded 320, added 320
+7.192 Progress: resolved 336, reused 0, downloaded 326, added 326
+8.192 Progress: resolved 336, reused 0, downloaded 330, added 330
+9.193 Progress: resolved 336, reused 0, downloaded 332, added 332
+9.841 ✓ Lockfile passes supply-chain policies (569 entries in 8.7s)
+10.19 Progress: resolved 336, reused 0, downloaded 333, added 333
+12.62 Progress: resolved 336, reused 0, downloaded 334, added 333
+13.62 Progress: resolved 336, reused 0, downloaded 334, added 334
+14.62 Progress: resolved 336, reused 0, downloaded 335, added 335
+14.68 Progress: resolved 336, reused 0, downloaded 336, added 336, done
+14.89 
+14.89 devDependencies:
+14.89 + prettier 3.8.4
+14.89 + typescript 5.9.3
+14.89 
+14.92 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+14.95 . preinstall: Done
+15.05 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: canvas@3.2.3, core-js@3.29.1, esbuild@0.27.3
+15.05 
+15.05 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+15.69 Scope: all 7 workspace projects
+15.76 ✓ Lockfile passes supply-chain policies (verified 5s ago)
+15.81 Progress: resolved 1, reused 0, downloaded 0, added 0
+15.81 artifacts/api-server                     | [WARN] deprecated @types/bcryptjs@3.0.0
+16.81 Progress: resolved 147, reused 146, downloaded 0, added 0
+17.54 [WARN] 1 deprecated subdependencies found: prebuild-install@7.1.3
+17.56 Packages: +1 -2
+17.56 +--
+17.59 Progress: resolved 336, reused 335, downloaded 0, added 1, done
+17.76 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+17.77 . preinstall: Done
+17.81 [WARN] Issues with peer dependencies found. Run "pnpm peers check" to list them.
+17.81 
+17.85 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: canvas@3.2.3, core-js@3.29.1, esbuild@0.27.3
+17.85 
+17.85 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+------
+failed to solve: process "/bin/sh -c pnpm install --frozen-lockfile || pnpm install" did not complete successfully: exit code: 1
+tmm@tmm:~/faceguard-standalone$ 
