@@ -1,0 +1,36 @@
+tmm@tmm:~/faceguard-standalone$ cd ~/faceguard-standalone
+git fetch origin
+git reset --hard origin/main
+docker compose --env-file .env up --build -d
+HEAD is now at 9f428e9 Fix Docker build: pin pnpm version, drop stale lockfile copy
+WARN[0000] Docker Compose is configured to build using Bake, but buildx isn't installed 
+[+] Building 68.6s (17/20)                                                                          docker:default
+ => [api-server internal] load build definition from Dockerfile.api-server                                    0.0s
+ => => transferring dockerfile: 1.89kB                                                                        0.0s
+ => [api-server internal] load metadata for docker.io/library/node:24-bookworm-slim                           0.6s
+ => [api-server internal] load .dockerignore                                                                  0.0s
+ => => transferring context: 2B                                                                               0.0s
+ => [api-server internal] load build context                                                                  0.0s
+ => => transferring context: 9.49kB                                                                           0.0s
+ => CACHED [api-server build  1/11] FROM docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b78  0.0s
+ => => resolve docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c29e27bf9befc8f5a26c  0.0s
+ => CACHED [api-server runtime 2/6] RUN apt-get update && apt-get install -y --no-install-recommends     ffm  0.0s
+ => CACHED [api-server runtime 3/6] WORKDIR /app                                                              0.0s
+ => [api-server build  2/11] RUN corepack enable && corepack prepare pnpm@10.26.1 --activate                  1.5s
+ => [api-server build  3/11] RUN apt-get update && apt-get install -y --no-install-recommends     python3 m  48.6s 
+ => [api-server build  4/11] WORKDIR /repo                                                                    0.1s 
+ => [api-server build  5/11] COPY pnpm-workspace.yaml package.json .npmrc* tsconfig.json tsconfig.base.json   0.1s 
+ => [api-server build  6/11] COPY lib ./lib                                                                   0.1s 
+ => [api-server build  7/11] COPY server ./server                                                             0.1s 
+ => [api-server build  8/11] RUN pnpm install --no-frozen-lockfile                                           14.3s 
+ => [api-server build  9/11] RUN pnpm --filter @workspace/db... run build --if-present                        0.8s 
+ => [api-server build 10/11] RUN pnpm --filter @workspace/api-server run build                                1.5s 
+ => ERROR [api-server build 11/11] RUN pnpm --filter @workspace/api-server deploy --prod /deploy/api-server   0.9s 
+------                                                                                                             
+ > [api-server build 11/11] RUN pnpm --filter @workspace/api-server deploy --prod /deploy/api-server:              
+0.812  ERR_PNPM_DEPLOY_NONINJECTED_WORKSPACE  By default, starting from pnpm v10, we only deploy from workspaces that have "inject-workspace-packages=true" set                                                                       
+0.812                                                                                                              
+0.812 If you want to deploy without using injected dependencies, run "pnpm deploy" with the "--legacy" flag or set "force-legacy-deploy" to true
+------
+failed to solve: process "/bin/sh -c pnpm --filter @workspace/api-server deploy --prod /deploy/api-server" did not complete successfully: exit code: 1
+tmm@tmm:~/faceguard-standalone$ 
