@@ -102,6 +102,18 @@ async function grabHttpFrame(streamUrl: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
+/** Strips embedded `user:pass@` credentials from a stream URL / error message before logging. */
+function redactCredentials(text: string): string {
+  return text.replace(/:\/\/[^/@\s]+@/g, "://***:***@");
+}
+
+function sanitizeError(err: unknown): unknown {
+  if (err instanceof Error) {
+    return { name: err.name, message: redactCredentials(err.message) };
+  }
+  return redactCredentials(String(err));
+}
+
 async function captureFrame(camera: typeof camerasTable.$inferSelect): Promise<Buffer | null> {
   const streamUrl = buildStreamUrl(camera);
   try {
@@ -110,7 +122,10 @@ async function captureFrame(camera: typeof camerasTable.$inferSelect): Promise<B
     }
     return await grabRtspFrame(streamUrl);
   } catch (err) {
-    logger.warn({ err, cameraId: camera.id, cameraName: camera.name }, "Failed to capture camera frame");
+    logger.warn(
+      { err: sanitizeError(err), cameraId: camera.id, cameraName: camera.name },
+      "Failed to capture camera frame",
+    );
     return null;
   }
 }
