@@ -1,0 +1,27 @@
+# Standalone build image for the FaceGuard web frontend, served by nginx which
+# also reverse-proxies /api to the api-server container (mirrors how the
+# Replit shared proxy routes /api and / to their respective services).
+# Build from the REPO ROOT:
+#   docker build -f selfhost/Dockerfile.face-guard -t faceguard-web .
+FROM node:24-bookworm-slim AS build
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /repo
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* ./
+COPY lib ./lib
+COPY artifacts/face-guard ./artifacts/face-guard
+COPY scripts ./scripts
+
+RUN pnpm install --frozen-lockfile || pnpm install
+
+ENV PORT=5173
+ENV BASE_PATH=/
+ENV NODE_ENV=production
+RUN pnpm --filter @workspace/face-guard run build
+
+FROM nginx:1.27-alpine
+COPY --from=build /repo/artifacts/face-guard/dist/public /usr/share/nginx/html
+COPY selfhost/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80

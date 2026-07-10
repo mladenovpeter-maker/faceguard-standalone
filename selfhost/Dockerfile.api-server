@@ -1,0 +1,35 @@
+# Standalone build image for the FaceGuard API server + camera-ingestion worker.
+# Build from the REPO ROOT (this is why the compose file sets `context: ..`):
+#   docker build -f selfhost/Dockerfile.api-server -t faceguard-api .
+FROM node:24-bookworm-slim AS build
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ pkg-config \
+    libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /repo
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* ./
+COPY lib ./lib
+COPY artifacts/api-server ./artifacts/api-server
+COPY scripts ./scripts
+
+RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm --filter @workspace/db... run build --if-present
+RUN pnpm --filter @workspace/api-server run build
+
+FROM node:24-bookworm-slim AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg libcairo2 libpango-1.0-0 libjpeg62-turbo libgif7 librsvg2-2 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=build /repo/artifacts/api-server/dist ./dist
+COPY --from=build /repo/artifacts/api-server/models ./models
+COPY --from=build /repo/artifacts/api-server/node_modules ./node_modules
+
+ENV NODE_ENV=production
+EXPOSE 8080
+
+CMD ["node", "--enable-source-maps", "dist/index.mjs"]

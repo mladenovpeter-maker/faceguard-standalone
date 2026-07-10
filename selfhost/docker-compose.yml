@@ -1,0 +1,68 @@
+# Standalone self-hosted FaceGuard stack: Postgres + API server + camera
+# ingestion worker + web frontend. Run from the REPO ROOT:
+#
+#   cp selfhost/.env.example selfhost/.env   # then edit it
+#   docker compose -f selfhost/docker-compose.yml --env-file selfhost/.env up --build
+#
+# See selfhost/README.md for full setup instructions.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: faceguard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-faceguard}
+      POSTGRES_DB: faceguard
+    volumes:
+      - faceguard-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U faceguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api-server:
+    build:
+      context: ..
+      dockerfile: selfhost/Dockerfile.api-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "8080"
+      NODE_ENV: production
+      DATABASE_URL: postgres://faceguard:${POSTGRES_PASSWORD:-faceguard}@postgres:5432/faceguard
+    ports:
+      - "8080:8080"
+
+  camera-worker:
+    build:
+      context: ..
+      dockerfile: selfhost/Dockerfile.api-server
+    restart: unless-stopped
+    depends_on:
+      - api-server
+    environment:
+      DATABASE_URL: postgres://faceguard:${POSTGRES_PASSWORD:-faceguard}@postgres:5432/faceguard
+      CAMERA_WORKER_API_URL: http://api-server:8080
+      CAMERA_WORKER_USERNAME: ${CAMERA_WORKER_USERNAME:-admin}
+      CAMERA_WORKER_PASSWORD: ${CAMERA_WORKER_PASSWORD}
+      CAMERA_WORKER_POLL_INTERVAL_MS: ${CAMERA_WORKER_POLL_INTERVAL_MS:-5000}
+    command: ["node", "--enable-source-maps", "dist/worker/camera-ingest.mjs"]
+
+  face-guard:
+    build:
+      context: ..
+      dockerfile: selfhost/Dockerfile.face-guard
+    restart: unless-stopped
+    depends_on:
+      - api-server
+    ports:
+      - "8081:80"
+
+volumes:
+  faceguard-db-data:
