@@ -22,7 +22,7 @@ RUN pnpm --filter @workspace/api-server run build
 # `pnpm deploy` writes a self-contained folder with REAL files (not pnpm's
 # usual symlinks into a shared content-addressable store), which is what we
 # need in the runtime stage below since it doesn't have that store available.
-RUN pnpm --filter @workspace/api-server deploy --prod /deploy/api-server
+RUN pnpm --filter @workspace/api-server deploy --prod --legacy /deploy/api-server
 
 FROM node:24-bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
