@@ -1,0 +1,1 @@
+- [Session cookies behind Replit proxy](session-cookies-replit-proxy.md) — express-session `secure` cookies need `app.set("trust proxy", 1)` or they're silently never set/sent.

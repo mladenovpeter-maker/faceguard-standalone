@@ -13,6 +13,12 @@ const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"
 
 const app: Express = express();
 
+// The app runs behind Replit's reverse proxy, which terminates TLS and
+// forwards over plain HTTP internally. Without this, Express (and
+// express-session's `secure` cookie option) never sees the request as
+// HTTPS, so the session cookie is silently never set.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,
@@ -40,9 +46,15 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false,
+      // The app is served through Replit's HTTPS proxy and can be embedded
+      // in a cross-origin iframe (e.g. the Canvas preview), so the session
+      // cookie must be SameSite=None + Secure or browsers will silently
+      // drop it on every request, causing spurious 401s.
+      secure: true,
+      sameSite: "none",
       maxAge: 8 * 60 * 60 * 1000, // 8 hours
     },
+    proxy: true,
   })
 );
 
