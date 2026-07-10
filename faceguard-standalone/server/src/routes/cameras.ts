@@ -14,6 +14,7 @@ import {
   UpdateCameraResponse,
   TestCameraConnectionResponse,
 } from "@workspace/api-zod";
+import { captureFrame, sanitizeError } from "../lib/camera-capture";
 
 const router: IRouter = Router();
 
@@ -172,18 +173,33 @@ router.post("/cameras/:id/test", async (req, res): Promise<void> => {
   }
 
   const start = Date.now();
-  // Simulate a connectivity check — real implementation would attempt RTSP/HTTP probe
-  const host = camera.host;
-  const latencyMs = Math.floor(Math.random() * 80) + 20;
 
-  // Mark camera online after test
-  await db.update(camerasTable).set({ status: "online" }).where(eq(camerasTable.id, params.data.id));
+  try {
+    await captureFrame(camera);
+    const latencyMs = Date.now() - start;
 
-  res.json(TestCameraConnectionResponse.parse({
-    success: true,
-    message: `Successfully connected to ${camera.brand.toUpperCase()} camera at ${host}`,
-    latencyMs,
-  }));
+    await db.update(camerasTable).set({ status: "online" }).where(eq(camerasTable.id, params.data.id));
+
+    res.json(TestCameraConnectionResponse.parse({
+      success: true,
+      message: `Successfully connected to ${camera.brand.toUpperCase()} camera at ${camera.host}`,
+      latencyMs,
+    }));
+  } catch (err) {
+    await db.update(camerasTable).set({ status: "offline" }).where(eq(camerasTable.id, params.data.id));
+
+    const sanitized = sanitizeError(err);
+    const message =
+      sanitized && typeof sanitized === "object" && "message" in sanitized
+        ? String((sanitized as { message: unknown }).message)
+        : String(sanitized);
+
+    res.json(TestCameraConnectionResponse.parse({
+      success: false,
+      message: `Could not connect to ${camera.brand.toUpperCase()} camera at ${camera.host}: ${message}`,
+      latencyMs: Date.now() - start,
+    }));
+  }
 });
 
 export default router;

@@ -18,18 +18,14 @@
  * found and matched. This keeps the worker simple and reuses the existing,
  * already-tested matching pipeline.
  */
-import { execFile } from "child_process";
-import { promisify } from "util";
 import { db, camerasTable } from "@workspace/db";
 import { logger } from "../lib/logger";
-
-const execFileAsync = promisify(execFile);
+import { captureFrame, sanitizeError } from "../lib/camera-capture";
 
 const API_BASE_URL = process.env.CAMERA_WORKER_API_URL ?? "http://localhost:8080";
 const USERNAME = process.env.CAMERA_WORKER_USERNAME;
 const PASSWORD = process.env.CAMERA_WORKER_PASSWORD;
 const POLL_INTERVAL_MS = Number(process.env.CAMERA_WORKER_POLL_INTERVAL_MS ?? 5000);
-const FFMPEG_TIMEOUT_MS = Number(process.env.CAMERA_WORKER_FFMPEG_TIMEOUT_MS ?? 8000);
 
 if (!USERNAME || !PASSWORD) {
   throw new Error(
@@ -64,63 +60,9 @@ async function getAuthToken(): Promise<string> {
   return authToken;
 }
 
-function buildStreamUrl(camera: typeof camerasTable.$inferSelect): string {
-  const auth = camera.username
-    ? `${encodeURIComponent(camera.username)}${camera.passwordHash ? `:${encodeURIComponent(camera.passwordHash)}` : ""}@`
-    : "";
-  const port = camera.port ? `:${camera.port}` : "";
-  const streamPath = camera.streamPath?.startsWith("/") ? camera.streamPath : `/${camera.streamPath ?? ""}`;
-  const scheme = camera.protocol === "http" || camera.protocol === "https" ? camera.protocol : "rtsp";
-  return `${scheme}://${auth}${camera.host}${port}${streamPath}`;
-}
-
-/** Grabs one JPEG still frame from an RTSP stream using ffmpeg. */
-async function grabRtspFrame(streamUrl: string): Promise<Buffer> {
-  const { stdout } = await execFileAsync(
-    "ffmpeg",
-    [
-      "-y",
-      "-rtsp_transport", "tcp",
-      "-i", streamUrl,
-      "-frames:v", "1",
-      "-q:v", "3",
-      "-f", "image2pipe",
-      "-vcodec", "mjpeg",
-      "pipe:1",
-    ],
-    { timeout: FFMPEG_TIMEOUT_MS, maxBuffer: 1024 * 1024 * 20, encoding: "buffer" as BufferEncoding },
-  );
-  return Buffer.from(stdout as unknown as Uint8Array);
-}
-
-/** Grabs one JPEG still frame from an HTTP snapshot-style camera URL. */
-async function grabHttpFrame(streamUrl: string): Promise<Buffer> {
-  const res = await fetch(streamUrl);
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} fetching camera snapshot`);
-  }
-  return Buffer.from(await res.arrayBuffer());
-}
-
-/** Strips embedded `user:pass@` credentials from a stream URL / error message before logging. */
-function redactCredentials(text: string): string {
-  return text.replace(/:\/\/[^/@\s]+@/g, "://***:***@");
-}
-
-function sanitizeError(err: unknown): unknown {
-  if (err instanceof Error) {
-    return { name: err.name, message: redactCredentials(err.message) };
-  }
-  return redactCredentials(String(err));
-}
-
-async function captureFrame(camera: typeof camerasTable.$inferSelect): Promise<Buffer | null> {
-  const streamUrl = buildStreamUrl(camera);
+async function captureFrameOrNull(camera: typeof camerasTable.$inferSelect): Promise<Buffer | null> {
   try {
-    if (camera.protocol === "http" || camera.protocol === "https") {
-      return await grabHttpFrame(streamUrl);
-    }
-    return await grabRtspFrame(streamUrl);
+    return await captureFrame(camera);
   } catch (err) {
     logger.warn(
       { err: sanitizeError(err), cameraId: camera.id, cameraName: camera.name },
@@ -176,7 +118,7 @@ async function pollAllCameras(): Promise<void> {
 
   await Promise.all(
     cameras.map(async (camera) => {
-      const frame = await captureFrame(camera);
+      const frame = await captureFrameOrNull(camera);
       if (!frame) return;
       try {
         await submitFrame(camera, frame);
