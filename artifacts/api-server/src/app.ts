@@ -52,6 +52,12 @@ app.use(
       // drop it on every request, causing spurious 401s.
       secure: true,
       sameSite: "none",
+      // Browsers increasingly block third-party cookies outright, even
+      // with SameSite=None + Secure, when the app is loaded inside a
+      // cross-origin iframe (e.g. Canvas preview). CHIPS (partitioned
+      // cookies) is the modern workaround: it scopes the cookie to the
+      // embedding top-level site instead of being blocked entirely.
+      partitioned: true,
       maxAge: 8 * 60 * 60 * 1000, // 8 hours
     },
     proxy: true,

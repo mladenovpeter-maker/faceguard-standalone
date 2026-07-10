@@ -26,3 +26,12 @@ use `sameSite: "none"` (not the default `"lax"`) if the app might be viewed
 inside an iframe (Canvas preview, embeds) — same-site-only cookies get
 dropped in third-party iframe contexts even when secure/trust-proxy are
 correct.
+
+Even with `secure: true; sameSite: "none"` set correctly, some browsers still
+block the cookie outright when it's third-party (set from an iframe whose
+origin differs from the top-level page, as in the Canvas preview) — this
+shows up as login succeeding (200) but the very next request 401'ing,
+intermittently, with no code change. Fix: add `cookie.partitioned: true`
+(CHIPS) in express-session's cookie options (needs express-session >= 1.18,
+which bundles a `cookie` package version supporting it) — this scopes the
+cookie per top-level embedding site instead of having it rejected.
