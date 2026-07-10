@@ -1,0 +1,136 @@
+tmm@tmm:~/faceguard-standalone$ cd ~/faceguard-standalone
+git fetch origin
+git reset --hard origin/main
+docker compose --env-file .env up --build -d
+remote: Enumerating objects: 264, done.
+remote: Counting objects: 100% (264/264), done.
+remote: Compressing objects: 100% (191/191), done.
+remote: Total 264 (delta 61), reused 264 (delta 61), pack-reused 0 (from 0)
+Receiving objects: 100% (264/264), 5.22 MiB | 9.47 MiB/s, done.
+Resolving deltas: 100% (61/61), done.
+From https://github.com/mladenovpeter-maker/faceguard-standalone
+ + 9f428e9...ecdba2a main       -> origin/main  (forced update)
+HEAD is now at ecdba2a FaceGuard standalone: pnpm v10 fixes (pinned version, --legacy deploy)
+WARN[0000] Docker Compose is configured to build using Bake, but buildx isn't installed 
+[+] Building 74.5s (48/50)                                                                          docker:default
+ => [api-server internal] load build definition from Dockerfile.api-server                                    0.0s
+ => => transferring dockerfile: 1.90kB                                                                        0.0s
+ => [face-guard internal] load metadata for docker.io/library/node:24-bookworm-slim                           1.3s
+ => [api-server internal] load .dockerignore                                                                  0.0s
+ => => transferring context: 2B                                                                               0.0s
+ => [face-guard build 1/8] FROM docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c29  0.1s
+ => => resolve docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c29e27bf9befc8f5a26c  0.0s
+ => [api-server internal] load build context                                                                  0.0s
+ => => transferring context: 9.49kB                                                                           0.0s
+ => CACHED [camera-worker runtime 2/6] RUN apt-get update && apt-get install -y --no-install-recommends       0.0s
+ => CACHED [camera-worker runtime 3/6] WORKDIR /app                                                           0.0s
+ => CACHED [face-guard build 2/8] RUN corepack enable && corepack prepare pnpm@10.26.1 --activate             0.0s
+ => CACHED [camera-worker build  3/11] RUN apt-get update && apt-get install -y --no-install-recommends       0.0s
+ => CACHED [camera-worker build  4/11] WORKDIR /repo                                                          0.0s
+ => CACHED [api-server build  5/11] COPY pnpm-workspace.yaml package.json .npmrc* tsconfig.json tsconfig.bas  0.0s
+ => CACHED [api-server build  6/11] COPY lib ./lib                                                            0.0s
+ => CACHED [api-server build  7/11] COPY server ./server                                                      0.0s
+ => CACHED [api-server build  8/11] RUN pnpm install --no-frozen-lockfile                                     0.0s
+ => CACHED [api-server build  9/11] RUN pnpm --filter @workspace/db... run build --if-present                 0.0s
+ => CACHED [api-server build 10/11] RUN pnpm --filter @workspace/api-server run build                         0.0s
+ => [api-server build 11/11] RUN pnpm --filter @workspace/api-server deploy --prod --legacy /deploy/api-ser  19.5s
+ => [api-server runtime 4/6] COPY --from=build /deploy/api-server/node_modules ./node_modules                 2.6s 
+ => [api-server runtime 5/6] COPY --from=build /repo/server/dist ./dist                                       0.3s 
+ => [api-server runtime 6/6] COPY --from=build /repo/server/models ./models                                   0.1s 
+ => [api-server] exporting to image                                                                          27.1s 
+ => => exporting layers                                                                                      20.3s 
+ => => exporting manifest sha256:959dab931866ae3f5ec57ca0508e540da7e420ed578a0d4c241c4bf60a2e5f37             0.0s 
+ => => exporting config sha256:1cbf525d2aa85b67ec3285148af9d1a34da1ebab04e6e04dba4b1e9619dc36fe               0.0s
+ => => exporting attestation manifest sha256:3538dea22f7096ddc91cc4a694300b9ac3b265d9a224b4813c5028bfe61ccbd  0.0s
+ => => exporting manifest list sha256:c4610162d89c7513371c054fc14c55eadaafbb1a51f5b5f71de29d471ef0e9f6        0.0s
+ => => naming to docker.io/library/faceguard-standalone-api-server:latest                                     0.0s
+ => => unpacking to docker.io/library/faceguard-standalone-api-server:latest                                  6.7s
+ => [api-server] resolving provenance for metadata file                                                       0.0s
+ => [face-guard internal] load build definition from Dockerfile.face-guard                                    0.0s
+ => => transferring dockerfile: 887B                                                                          0.0s
+ => [camera-worker internal] load build definition from Dockerfile.api-server                                 0.0s
+ => => transferring dockerfile: 1.90kB                                                                        0.0s
+ => [face-guard internal] load metadata for docker.io/library/nginx:1.27-alpine                               2.1s
+ => [camera-worker internal] load .dockerignore                                                               0.0s
+ => => transferring context: 2B                                                                               0.0s
+ => [camera-worker internal] load build context                                                               0.0s
+ => => transferring context: 9.49kB                                                                           0.0s
+ => CACHED [camera-worker build  5/11] COPY pnpm-workspace.yaml package.json .npmrc* tsconfig.json tsconfig.  0.0s
+ => CACHED [camera-worker build  6/11] COPY lib ./lib                                                         0.0s
+ => CACHED [camera-worker build  7/11] COPY server ./server                                                   0.0s
+ => CACHED [camera-worker build  8/11] RUN pnpm install --no-frozen-lockfile                                  0.0s
+ => CACHED [camera-worker build  9/11] RUN pnpm --filter @workspace/db... run build --if-present              0.0s
+ => CACHED [camera-worker build 10/11] RUN pnpm --filter @workspace/api-server run build                      0.0s
+ => CACHED [camera-worker build 11/11] RUN pnpm --filter @workspace/api-server deploy --prod --legacy /deplo  0.0s
+ => CACHED [camera-worker runtime 4/6] COPY --from=build /deploy/api-server/node_modules ./node_modules       0.0s
+ => CACHED [camera-worker runtime 5/6] COPY --from=build /repo/server/dist ./dist                             0.0s
+ => CACHED [camera-worker runtime 6/6] COPY --from=build /repo/server/models ./models                         0.0s
+ => [camera-worker] exporting to image                                                                        0.2s
+ => => exporting layers                                                                                       0.0s
+ => => exporting manifest sha256:a1bd1681a65c1331b9d8f8d2016205ec65b230d7e8c97f83a8c2309c9ddd38ed             0.0s
+ => => exporting config sha256:a4f7bc8cde00e118222f4f670645f64e8495ca3b419950b27de2a0e17f57306d               0.0s
+ => => exporting attestation manifest sha256:accfcd61a44fff5abeca71455ed4273f4efaa60e30b1b22947da999b11ba19a  0.0s
+ => => exporting manifest list sha256:3588346aaf1cb3139b6b6202d4c7de09e2ee4e0ed076841462dd832b3bdb1083        0.0s
+ => => naming to docker.io/library/faceguard-standalone-camera-worker:latest                                  0.0s
+ => => unpacking to docker.io/library/faceguard-standalone-camera-worker:latest                               0.0s
+ => [camera-worker] resolving provenance for metadata file                                                    0.0s
+ => [face-guard internal] load .dockerignore                                                                  0.0s
+ => => transferring context: 2B                                                                               0.0s
+ => [face-guard internal] load build context                                                                  0.0s
+ => => transferring context: 441.44kB                                                                         0.0s
+ => [face-guard stage-1 1/3] FROM docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743  6.2s
+ => => resolve docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef  0.0s
+ => => sha256:39c2ddfd6010082a4a646e7ca44e95aca9bf3eaebc00f17f7ccc2954004f2a7d 15.52MB / 15.52MB              3.8s
+ => => sha256:34a64644b756511a2e217f0508e11d1a572085d66cd6dc9a555a082ad49a3102 1.40kB / 1.40kB                0.3s
+ => => sha256:197eb75867ef4fcecd4724f17b0972ab0489436860a594a9445f8eaff8155053 1.21kB / 1.21kB                0.5s
+ => => sha256:81bd8ed7ec6789b0cb7f1b47ee731c522f6dba83201ec73cd6bca1350f582948 402B / 402B                    1.0s
+ => => sha256:d7e5070240863957ebb0b5a44a5729963c3462666baa2947d00628cb5f2d5773 955B / 955B                    0.5s
+ => => sha256:f18232174bc91741fdf3da96d85011092101a032a93a388b79e99e69c2d5c870 3.64MB / 3.64MB                1.2s
+ => => sha256:b464cfdf2a6319875aeb27359ec549790ce14d8214fcb16ef915e4530e5ed235 629B / 629B                    0.2s
+ => => sha256:61ca4f733c802afd9e05a32f0de0361b6d713b8b53292dc15fb093229f648674 1.79MB / 1.79MB                1.7s
+ => => extracting sha256:f18232174bc91741fdf3da96d85011092101a032a93a388b79e99e69c2d5c870                     0.1s
+ => => extracting sha256:61ca4f733c802afd9e05a32f0de0361b6d713b8b53292dc15fb093229f648674                     0.1s
+ => => extracting sha256:b464cfdf2a6319875aeb27359ec549790ce14d8214fcb16ef915e4530e5ed235                     0.0s
+ => => extracting sha256:d7e5070240863957ebb0b5a44a5729963c3462666baa2947d00628cb5f2d5773                     0.0s
+ => => extracting sha256:81bd8ed7ec6789b0cb7f1b47ee731c522f6dba83201ec73cd6bca1350f582948                     0.0s
+ => => extracting sha256:197eb75867ef4fcecd4724f17b0972ab0489436860a594a9445f8eaff8155053                     0.0s
+ => => extracting sha256:34a64644b756511a2e217f0508e11d1a572085d66cd6dc9a555a082ad49a3102                     0.0s
+ => => extracting sha256:39c2ddfd6010082a4a646e7ca44e95aca9bf3eaebc00f17f7ccc2954004f2a7d                     0.4s
+ => [face-guard build 3/8] WORKDIR /repo                                                                      2.0s
+ => [face-guard build 4/8] COPY pnpm-workspace.yaml package.json .npmrc* tsconfig.json tsconfig.base.json ./  0.2s
+ => [face-guard build 5/8] COPY lib ./lib                                                                     0.1s
+ => [face-guard build 6/8] COPY client ./client                                                               0.1s
+ => [face-guard build 7/8] RUN pnpm install --no-frozen-lockfile                                             15.7s
+ => ERROR [face-guard build 8/8] RUN pnpm --filter @workspace/face-guard run build                            1.4s
+------
+ > [face-guard build 8/8] RUN pnpm --filter @workspace/face-guard run build:
+0.882 
+0.882 > @workspace/face-guard@0.0.0 build /repo/client
+0.882 > vite build --config vite.config.ts
+0.882 
+1.057 ▲ [WARNING] Cannot find base config file "../../tsconfig.base.json" [tsconfig.json]
+1.057 
+1.057     tsconfig.json:2:13:
+1.057       2 │   "extends": "../../tsconfig.base.json",
+1.057         ╵              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+1.057 
+1.186 vite v7.3.6 building client environment for production...
+1.256 ✓ 0 modules transformed.
+1.260 ✗ Build failed in 45ms
+1.260 error during build:
+1.260 [vite:build-html] failed to resolve "extends":"../../tsconfig.base.json" in /repo/client/tsconfig.json
+1.260 file: /repo/client/index.html
+1.260     at resolveExtends (file:///repo/node_modules/.pnpm/vite@7.3.6_@types+node@25.9.5_jiti@2.7.0_lightningcss@1.32.0_tsx@4.23.0/node_modules/vite/dist/node/chunks/config.js:5809:8)
+1.260     at parseExtends (file:///repo/node_modules/.pnpm/vite@7.3.6_@types+node@25.9.5_jiti@2.7.0_lightningcss@1.32.0_tsx@4.23.0/node_modules/vite/dist/node/chunks/config.js:5775:71)
+1.260     at parse$13 (file:///repo/node_modules/.pnpm/vite@7.3.6_@types+node@25.9.5_jiti@2.7.0_lightningcss@1.32.0_tsx@4.23.0/node_modules/vite/dist/node/chunks/config.js:5677:23)
+1.260     at async loadTsconfigJsonForFile (file:///repo/node_modules/.pnpm/vite@7.3.6_@types+node@25.9.5_jiti@2.7.0_lightningcss@1.32.0_tsx@4.23.0/node_modules/vite/dist/node/chunks/config.js:6302:37)
+1.260     at async transformWithEsbuild (file:///repo/node_modules/.pnpm/vite@7.3.6_@types+node@25.9.5_jiti@2.7.0_lightningcss@1.32.0_tsx@4.23.0/node_modules/vite/dist/node/chunks/config.js:6086:55)
+1.260     at async Object.transform (file:///repo/node_modules/.pnpm/vite@7.3.6_@types+node@25.9.5_jiti@2.7.0_lightningcss@1.32.0_tsx@4.23.0/node_modules/vite/dist/node/chunks/config.js:6172:20)
+1.260     at async transform (file:///repo/node_modules/.pnpm/rollup@4.62.2/node_modules/rollup/dist/es/shared/node-entry.js:21726:16)
+1.260     at async ModuleLoader.addModuleSource (file:///repo/node_modules/.pnpm/rollup@4.62.2/node_modules/rollup/dist/es/shared/node-entry.js:21946:36)
+1.297 /repo/client:
+1.297  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/face-guard@0.0.0 build: `vite build --config vite.config.ts`
+1.297 Exit status 1
+------
+failed to solve: process "/bin/sh -c pnpm --filter @workspace/face-guard run build" did not complete successfully: exit code: 1
+tmm@tmm:~/faceguard-standalone$ 
