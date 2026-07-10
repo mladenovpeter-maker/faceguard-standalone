@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,8 +26,14 @@ const DAYS = [
   { iso: 7, label: "Неделя" },
 ];
 
+const DAY_GROUPS: { label: string; days: number[] }[] = [
+  { label: "Всеки ден", days: [1, 2, 3, 4, 5, 6, 7] },
+  { label: "Работни дни (Пон–Пет)", days: [1, 2, 3, 4, 5] },
+  { label: "Уикенд (Съб–Нед)", days: [6, 7] },
+];
+
 const slotSchema = z.object({
-  dayOfWeek: z.coerce.number().min(1).max(7),
+  daysOfWeek: z.array(z.number().min(1).max(7)).min(1, "Изберете поне един ден"),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "Формат ЧЧ:ММ"),
   endTime:   z.string().regex(/^\d{2}:\d{2}$/, "Формат ЧЧ:ММ"),
 });
@@ -43,19 +50,23 @@ function DepartmentScheduleCard({ departmentId, departmentName }: { departmentId
 
   const form = useForm<SlotForm>({
     resolver: zodResolver(slotSchema),
-    defaultValues: { dayOfWeek: 1, startTime: "08:00", endTime: "17:00" },
+    defaultValues: { daysOfWeek: [1], startTime: "08:00", endTime: "17:00" },
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: getListDepartmentSchedulesQueryKey({ departmentId }) });
 
   async function onAdd(values: SlotForm) {
-    await upsert.mutateAsync(
-      { data: { departmentId, ...values } },
-      {
-        onSuccess: () => { toast({ title: "Работният час е записан" }); invalidate(); },
-        onError:   () => toast({ title: "Грешка при запис", variant: "destructive" }),
-      }
-    );
+    try {
+      await Promise.all(
+        values.daysOfWeek.map((dayOfWeek) =>
+          upsert.mutateAsync({ data: { departmentId, dayOfWeek, startTime: values.startTime, endTime: values.endTime } })
+        )
+      );
+      toast({ title: "Работното време е записано" });
+      invalidate();
+    } catch {
+      toast({ title: "Грешка при запис", variant: "destructive" });
+    }
   }
 
   async function onDelete(id: number) {
@@ -101,22 +112,43 @@ function DepartmentScheduleCard({ departmentId, departmentName }: { departmentId
         </div>
 
         <div className="border-t border-border pt-4">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Добави / Замени ден</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Добави / Замени работно време</p>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onAdd)} className="space-y-3">
-              <FormField control={form.control} name="dayOfWeek" render={({ field }) => (
+              <FormField control={form.control} name="daysOfWeek" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ден</FormLabel>
-                  <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {DAYS.map((d) => (
-                        <SelectItem key={d.iso} value={String(d.iso)}>
-                          {d.label}{scheduledDays.has(d.iso) ? " ✓" : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Дни</FormLabel>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {DAY_GROUPS.map((g) => (
+                      <Button
+                        key={g.label} type="button" size="sm" variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => field.onChange(g.days)}
+                      >
+                        {g.label}
+                      </Button>
+                    ))}
+                    <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => field.onChange([])}>
+                      Изчисти
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {DAYS.map((d) => (
+                      <label key={d.iso} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={field.value.includes(d.iso)}
+                          onCheckedChange={(checked) => {
+                            field.onChange(
+                              checked
+                                ? [...field.value, d.iso].sort((a, b) => a - b)
+                                : field.value.filter((v) => v !== d.iso)
+                            );
+                          }}
+                        />
+                        {d.label}{scheduledDays.has(d.iso) ? " ✓" : ""}
+                      </label>
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -138,7 +170,7 @@ function DepartmentScheduleCard({ departmentId, departmentName }: { departmentId
               </div>
               <Button type="submit" className="w-full" disabled={upsert.isPending}>
                 <Plus className="h-4 w-4 mr-2" />
-                {scheduledDays.has(form.watch("dayOfWeek")) ? "Замени часа" : "Добави ден"}
+                Запази работно време
               </Button>
             </form>
           </Form>
