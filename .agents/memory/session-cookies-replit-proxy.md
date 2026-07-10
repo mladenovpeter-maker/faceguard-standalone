@@ -31,7 +31,15 @@ Even with `secure: true; sameSite: "none"` set correctly, some browsers still
 block the cookie outright when it's third-party (set from an iframe whose
 origin differs from the top-level page, as in the Canvas preview) — this
 shows up as login succeeding (200) but the very next request 401'ing,
-intermittently, with no code change. Fix: add `cookie.partitioned: true`
-(CHIPS) in express-session's cookie options (needs express-session >= 1.18,
-which bundles a `cookie` package version supporting it) — this scopes the
-cookie per top-level embedding site instead of having it rejected.
+intermittently, with no code change. `cookie.partitioned: true` (CHIPS)
+did NOT fully resolve it either in the Canvas iframe context.
+
+**Final fix that actually worked:** abandon cookies entirely for
+cross-origin-embeddable apps and use a Bearer token instead — return an
+opaque token from `/api/auth/login`, store it client-side (`localStorage`),
+and attach it as `Authorization: Bearer <token>` on every request via a
+token-getter hook (see `lib/api-client-react/src/custom-fetch.ts`'s
+`setAuthTokenGetter`). This sidesteps all browser cookie policy (SameSite,
+third-party blocking, partitioning) since the token is sent explicitly by
+JS, not attached implicitly by the browser. Preferred default for any
+Replit web app whose preview may be embedded in an iframe (Canvas, etc.).

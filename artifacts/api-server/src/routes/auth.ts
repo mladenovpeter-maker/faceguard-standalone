@@ -2,20 +2,21 @@ import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, systemUsersTable } from "@workspace/db";
+import { createToken, deleteToken, extractBearerToken } from "../lib/auth-tokens";
 
 const router: IRouter = Router();
 
 /* GET /api/auth/me — returns the logged-in user or 401 */
 router.get("/auth/me", (req, res): void => {
-  if (!req.session?.userId) {
+  if (!req.authUser) {
     res.status(401).json({ error: "Не сте влезли в системата" });
     return;
   }
   res.json({
-    id: req.session.userId,
-    username: req.session.username,
-    role: req.session.role,
-    displayName: req.session.displayName,
+    id: req.authUser.userId,
+    username: req.authUser.username,
+    role: req.authUser.role,
+    displayName: req.authUser.displayName,
   });
 });
 
@@ -44,12 +45,15 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  req.session.userId = user.id;
-  req.session.username = user.username;
-  req.session.role = user.role;
-  req.session.displayName = user.displayName;
+  const token = createToken({
+    userId: user.id,
+    username: user.username,
+    role: user.role,
+    displayName: user.displayName,
+  });
 
   res.json({
+    token,
     id: user.id,
     username: user.username,
     role: user.role,
@@ -59,15 +63,13 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 
 /* POST /api/auth/logout */
 router.post("/auth/logout", (req, res): void => {
-  req.session.destroy(() => {
-    res.clearCookie("faceguard.sid");
-    res.json({ ok: true });
-  });
+  deleteToken(extractBearerToken(req.headers.authorization));
+  res.json({ ok: true });
 });
 
 /* POST /api/auth/change-password */
 router.post("/auth/change-password", async (req, res): Promise<void> => {
-  if (!req.session?.userId) {
+  if (!req.authUser) {
     res.status(401).json({ error: "Не сте влезли в системата" });
     return;
   }
@@ -82,7 +84,7 @@ router.post("/auth/change-password", async (req, res): Promise<void> => {
   const [user] = await db
     .select()
     .from(systemUsersTable)
-    .where(eq(systemUsersTable.id, req.session.userId));
+    .where(eq(systemUsersTable.id, req.authUser.userId));
 
   if (!user) {
     res.status(404).json({ error: "Потребителят не е намерен" });

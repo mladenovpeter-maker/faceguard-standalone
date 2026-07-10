@@ -2,22 +2,16 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import cors from "cors";
 import pinoHttp from "pino-http";
 import path from "path";
-import session from "express-session";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { seedSystemUsers } from "./lib/seed-users";
+import { getTokenData, extractBearerToken } from "./lib/auth-tokens";
 
 const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
   ? path.resolve(process.cwd(), "../..")
   : process.cwd();
 
 const app: Express = express();
-
-// The app runs behind Replit's reverse proxy, which terminates TLS and
-// forwards over plain HTTP internally. Without this, Express (and
-// express-session's `secure` cookie option) never sees the request as
-// HTTPS, so the session cookie is silently never set.
-app.set("trust proxy", 1);
 
 app.use(
   pinoHttp({
@@ -37,32 +31,18 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-/* ── Sessions (in-memory store — resets on server restart) ── */
-app.use(
-  session({
-    name: "faceguard.sid",
-    secret: process.env["SESSION_SECRET"] ?? "faceguard-dev-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      // The app is served through Replit's HTTPS proxy and can be embedded
-      // in a cross-origin iframe (e.g. the Canvas preview), so the session
-      // cookie must be SameSite=None + Secure or browsers will silently
-      // drop it on every request, causing spurious 401s.
-      secure: true,
-      sameSite: "none",
-      // Browsers increasingly block third-party cookies outright, even
-      // with SameSite=None + Secure, when the app is loaded inside a
-      // cross-origin iframe (e.g. Canvas preview). CHIPS (partitioned
-      // cookies) is the modern workaround: it scopes the cookie to the
-      // embedding top-level site instead of being blocked entirely.
-      partitioned: true,
-      maxAge: 8 * 60 * 60 * 1000, // 8 hours
-    },
-    proxy: true,
-  })
-);
+/* ── Auth: Bearer token in the Authorization header (in-memory store,
+   resets on server restart). Deliberately NOT cookie-based: this app can
+   be embedded cross-origin (e.g. the Canvas preview), and browsers
+   increasingly block third-party cookies outright even with
+   SameSite=None; Secure; Partitioned set correctly. A token sent
+   explicitly by the client sidesteps cookie policy entirely. ── */
+app.use((req: Request, _res: Response, next: NextFunction): void => {
+  const token = extractBearerToken(req.headers.authorization);
+  const data = getTokenData(token);
+  if (data) req.authUser = data;
+  next();
+});
 
 /* ── Auth guard: protect everything under /api except health + auth ── */
 const PUBLIC_PATHS = ["/api/healthz", "/api/auth/login", "/api/auth/me"];
@@ -73,7 +53,7 @@ app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
     next();
     return;
   }
-  if (!req.session?.userId) {
+  if (!req.authUser) {
     res.status(401).json({ error: "Необходим е вход в системата" });
     return;
   }
