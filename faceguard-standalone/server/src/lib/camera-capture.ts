@@ -21,23 +21,38 @@ export function buildStreamUrl(camera: typeof camerasTable.$inferSelect): string
   return `${scheme}://${auth}${camera.host}${port}${streamPath}`;
 }
 
+/** Extracts the last meaningful line from ffmpeg's stderr output (skips its verbose version/config banner). */
+function extractFfmpegErrorSummary(stderr: string): string {
+  const lines = stderr
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  return lines[lines.length - 1] ?? "Unknown ffmpeg error";
+}
+
 /** Grabs one JPEG still frame from an RTSP stream using ffmpeg. */
 async function grabRtspFrame(streamUrl: string): Promise<Buffer> {
-  const { stdout } = await execFileAsync(
-    "ffmpeg",
-    [
-      "-y",
-      "-rtsp_transport", "tcp",
-      "-i", streamUrl,
-      "-frames:v", "1",
-      "-q:v", "3",
-      "-f", "image2pipe",
-      "-vcodec", "mjpeg",
-      "pipe:1",
-    ],
-    { timeout: FFMPEG_TIMEOUT_MS, maxBuffer: 1024 * 1024 * 20, encoding: "buffer" as BufferEncoding },
-  );
-  return Buffer.from(stdout as unknown as Uint8Array);
+  try {
+    const { stdout } = await execFileAsync(
+      "ffmpeg",
+      [
+        "-y",
+        "-loglevel", "error",
+        "-rtsp_transport", "tcp",
+        "-i", streamUrl,
+        "-frames:v", "1",
+        "-q:v", "3",
+        "-f", "image2pipe",
+        "-vcodec", "mjpeg",
+        "pipe:1",
+      ],
+      { timeout: FFMPEG_TIMEOUT_MS, maxBuffer: 1024 * 1024 * 20, encoding: "buffer" as BufferEncoding },
+    );
+    return Buffer.from(stdout as unknown as Uint8Array);
+  } catch (err) {
+    const stderr = err && typeof err === "object" && "stderr" in err ? String((err as { stderr: unknown }).stderr) : "";
+    throw new Error(stderr ? extractFfmpegErrorSummary(stderr) : err instanceof Error ? err.message : String(err));
+  }
 }
 
 /** Grabs one JPEG still frame from an HTTP snapshot-style camera URL. */
