@@ -1,0 +1,73 @@
+tmm@tmm:~/faceguard-standalone$ mv .env selfhost/.env
+docker compose -f selfhost/docker-compose.yml --env-file selfhost/.env up --build -d
+WARN[0000] Docker Compose is configured to build using Bake, but buildx isn't installed 
+[+] Building 19.3s (13/21)                                                                          docker:default
+ => [api-server internal] load build definition from Dockerfile.api-server                                    0.0s
+ => => transferring dockerfile: 1.72kB                                                                        0.0s
+ => [api-server internal] load metadata for docker.io/library/node:24-bookworm-slim                           0.0s
+ => [api-server internal] load .dockerignore                                                                  0.0s
+ => => transferring context: 2B                                                                               0.0s
+ => [api-server build  1/12] FROM docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c  0.1s
+ => => resolve docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c29e27bf9befc8f5a26c  0.0s
+ => [api-server internal] load build context                                                                  0.1s
+ => => transferring context: 11.81MB                                                                          0.1s
+ => CACHED [api-server build  2/12] RUN corepack enable && corepack prepare pnpm@latest --activate            0.0s
+ => CACHED [api-server build  3/12] RUN apt-get update && apt-get install -y --no-install-recommends     pyt  0.0s
+ => CACHED [api-server build  4/12] WORKDIR /repo                                                             0.0s
+ => [api-server build  5/12] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* ./                 0.1s
+ => [api-server build  6/12] COPY lib ./lib                                                                   0.1s
+ => [api-server build  7/12] COPY artifacts/api-server ./artifacts/api-server                                 0.1s
+ => [api-server build  8/12] COPY scripts ./scripts                                                           0.1s
+ => ERROR [api-server build  9/12] RUN pnpm install --frozen-lockfile || pnpm install                        18.6s
+------                                                                                                             
+ > [api-server build  9/12] RUN pnpm install --frozen-lockfile || pnpm install:                                    
+1.017 Scope: all 7 workspace projects                                                                              
+1.149 ? Verifying lockfile against supply-chain policies (569 entries)...                                          
+1.160 Lockfile is up to date, resolution step is skipped                                                           
+1.253 Progress: resolved 1, reused 0, downloaded 0, added 0                                                        
+1.306 Packages: +336
+1.306 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2.254 Progress: resolved 336, reused 0, downloaded 51, added 51
+3.253 Progress: resolved 336, reused 0, downloaded 115, added 115
+4.253 Progress: resolved 336, reused 0, downloaded 183, added 183
+5.253 Progress: resolved 336, reused 0, downloaded 240, added 240
+6.258 Progress: resolved 336, reused 0, downloaded 311, added 311
+7.266 Progress: resolved 336, reused 0, downloaded 325, added 325
+7.476 [WARN] Tarball download average speed 23 KiB/s (size 43 KiB) is below 50 KiB/s: https://registry.npmjs.org/@orval/zod/-/zod-8.18.0.tgz (GET)
+8.278 Progress: resolved 336, reused 0, downloaded 330, added 329
+9.278 Progress: resolved 336, reused 0, downloaded 331, added 331
+10.28 Progress: resolved 336, reused 0, downloaded 332, added 332
+11.28 Progress: resolved 336, reused 0, downloaded 333, added 333
+12.28 Progress: resolved 336, reused 0, downloaded 335, added 335
+12.74 ✓ Lockfile passes supply-chain policies (569 entries in 11.5s)
+13.96 Progress: resolved 336, reused 0, downloaded 336, added 335
+13.97 Progress: resolved 336, reused 0, downloaded 336, added 336, done
+14.18 
+14.18 devDependencies:
+14.18 + prettier 3.8.4
+14.18 + typescript 5.9.3
+14.18 
+14.19 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+14.22 . preinstall: Done
+14.31 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: canvas@3.2.3, core-js@3.29.1, esbuild@0.27.3
+14.31 
+14.31 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+15.02 Scope: all 7 workspace projects
+15.09 ✓ Lockfile passes supply-chain policies (verified 2s ago)
+15.15 Progress: resolved 1, reused 0, downloaded 0, added 0
+15.15 artifacts/api-server                     | [WARN] deprecated @types/bcryptjs@3.0.0
+16.15 Progress: resolved 147, reused 146, downloaded 0, added 0
+16.85 [WARN] 1 deprecated subdependencies found: prebuild-install@7.1.3
+16.87 Packages: +1 -2
+16.87 +--
+16.90 Progress: resolved 336, reused 335, downloaded 0, added 1, done
+17.05 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+17.08 . preinstall: Done
+17.11 [WARN] Issues with peer dependencies found. Run "pnpm peers check" to list them.
+17.11 
+17.15 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: canvas@3.2.3, core-js@3.29.1, esbuild@0.27.3
+17.15 
+17.15 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+------
+failed to solve: process "/bin/sh -c pnpm install --frozen-lockfile || pnpm install" did not complete successfully: exit code: 1
+tmm@tmm:~/faceguard-standalone$ 
