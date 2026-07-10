@@ -3,7 +3,7 @@
 #   docker build -f selfhost/Dockerfile.api-server -t faceguard-api .
 FROM node:24-bookworm-slim AS build
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 make g++ pkg-config \
     libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
