@@ -1,0 +1,79 @@
+tmm@tmm:~/faceguard-standalone$ cd ~/faceguard-standalone
+git pull
+docker compose --env-file .env up --build -d
+remote: Enumerating objects: 264, done.
+remote: Counting objects: 100% (264/264), done.
+remote: Compressing objects: 100% (191/191), done.
+remote: Total 264 (delta 61), reused 264 (delta 61), pack-reused 0 (from 0)
+Receiving objects: 100% (264/264), 5.14 MiB | 9.00 MiB/s, done.
+Resolving deltas: 100% (61/61), done.
+From https://github.com/mladenovpeter-maker/faceguard-standalone
+ + a19265e...9f428e9 main       -> origin/main  (forced update)
+hint: You have divergent branches and need to specify how to reconcile them.
+hint: You can do so by running one of the following commands sometime before
+hint: your next pull:
+hint: 
+hint:   git config pull.rebase false  # merge
+hint:   git config pull.rebase true   # rebase
+hint:   git config pull.ff only       # fast-forward only
+hint: 
+hint: You can replace "git config" with "git config --global" to set a default
+hint: preference for all repositories. You can also pass --rebase, --no-rebase,
+hint: or --ff-only on the command line to override the configured default per
+hint: invocation.
+fatal: Need to specify how to reconcile divergent branches.
+WARN[0000] Docker Compose is configured to build using Bake, but buildx isn't installed 
+[+] Building 13.6s (14/20)                                                                          docker:default
+ => [api-server internal] load build definition from Dockerfile.api-server                                    0.0s
+ => => transferring dockerfile: 1.62kB                                                                        0.0s
+ => [api-server internal] load metadata for docker.io/library/node:24-bookworm-slim                           0.9s
+ => [api-server internal] load .dockerignore                                                                  0.0s
+ => => transferring context: 2B                                                                               0.0s
+ => [api-server internal] load build context                                                                  0.0s
+ => => transferring context: 9.49kB                                                                           0.0s
+ => [api-server build  1/11] FROM docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c  0.0s
+ => => resolve docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c29e27bf9befc8f5a26c  0.0s
+ => CACHED [api-server runtime 2/6] RUN apt-get update && apt-get install -y --no-install-recommends     ffm  0.0s
+ => CACHED [api-server runtime 3/6] WORKDIR /app                                                              0.0s
+ => CACHED [api-server build  2/11] RUN corepack enable && corepack prepare pnpm@latest --activate            0.0s
+ => CACHED [api-server build  3/11] RUN apt-get update && apt-get install -y --no-install-recommends     pyt  0.0s
+ => CACHED [api-server build  4/11] WORKDIR /repo                                                             0.0s
+ => CACHED [api-server build  5/11] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* tsconfig.j  0.0s
+ => CACHED [api-server build  6/11] COPY lib ./lib                                                            0.0s
+ => CACHED [api-server build  7/11] COPY server ./server                                                      0.0s
+ => ERROR [api-server build  8/11] RUN pnpm install --frozen-lockfile || pnpm install                        12.5s
+------                                                                                                             
+ > [api-server build  8/11] RUN pnpm install --frozen-lockfile || pnpm install:                                    
+0.925 Scope: all 5 workspace projects                                                                              
+1.092 [ERR_PNPM_LOCKFILE_CONFIG_MISMATCH] Cannot proceed with the frozen installation. The current "overrides" configuration doesn't match the value found in the lockfile                                                            
+1.092                                                                                                              
+1.092 Update your lockfile using "pnpm install --no-frozen-lockfile"
+1.666 Scope: all 5 workspace projects
+1.824 Progress: resolved 1, reused 0, downloaded 0, added 0
+2.039 server                                   | [WARN] deprecated @types/bcryptjs@3.0.0
+2.825 Progress: resolved 31, reused 0, downloaded 24, added 0
+3.826 Progress: resolved 32, reused 0, downloaded 29, added 0
+4.825 Progress: resolved 127, reused 0, downloaded 102, added 0
+5.648 [WARN] Tarball download average speed 1 KiB/s (size 2 KiB) is below 50 KiB/s: https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.0.tgz (GET)
+5.825 Progress: resolved 178, reused 0, downloaded 165, added 0
+6.826 Progress: resolved 200, reused 0, downloaded 187, added 0
+7.826 Progress: resolved 228, reused 0, downloaded 217, added 0
+8.716 [WARN] 1 deprecated subdependencies found: prebuild-install@7.1.3
+8.724 Packages: +233
+8.724 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+8.826 Progress: resolved 234, reused 0, downloaded 231, added 121
+9.827 Progress: resolved 234, reused 0, downloaded 231, added 231
+10.83 Progress: resolved 234, reused 0, downloaded 232, added 232
+11.02 Progress: resolved 234, reused 0, downloaded 233, added 233, done
+11.27 [WARN] Issues with peer dependencies found. Run "pnpm peers check" to list them.
+11.27 
+11.27 devDependencies:
+11.27 + prettier 3.9.4 (3.9.5 is available)
+11.27 + typescript 5.9.3 (7.0.2 is available)
+11.27 
+11.33 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: canvas@3.2.3, core-js@3.29.1, esbuild@0.27.3
+11.33 
+11.33 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+------
+failed to solve: process "/bin/sh -c pnpm install --frozen-lockfile || pnpm install" did not complete successfully: exit code: 1
+tmm@tmm:~/faceguard-standalone$ 
