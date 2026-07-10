@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 /* ── Types ── */
 const LEAVE_TYPES = [
@@ -98,6 +99,8 @@ export default function LeavesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing]     = useState<LeaveRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LeaveRecord | null>(null);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const { data: leaves = [], isLoading } = useListLeaves(
     filterStatus !== "all" ? { status: filterStatus as any } : {}
@@ -173,10 +176,12 @@ export default function LeavesPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Отпуски</h1>
+        {isAdmin && (
         <Button onClick={openAdd} className="gap-2">
           <Plus className="h-4 w-4" />
           ДОБАВИ ОТПУСКА
         </Button>
+        )}
       </div>
 
       {/* Filter */}
@@ -236,6 +241,7 @@ export default function LeavesPage() {
                   <td className="px-4 py-3 text-muted-foreground max-w-[180px] truncate">{leave.reason || "—"}</td>
                   <td className="px-4 py-3"><StatusBadge status={leave.status} /></td>
                   <td className="px-4 py-3 text-right">
+                    {isAdmin && (
                     <div className="flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(leave)}>
                         <Pencil className="h-3.5 w-3.5" />
@@ -248,6 +254,7 @@ export default function LeavesPage() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
+                    )}
                   </td>
                 </tr>
               ))
@@ -263,6 +270,7 @@ export default function LeavesPage() {
       </div>
 
       {/* Add/Edit dialog */}
+      {isAdmin && (
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
@@ -364,8 +372,10 @@ export default function LeavesPage() {
           </Form>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Delete confirmation */}
+      {isAdmin && (
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -387,6 +397,7 @@ export default function LeavesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      )}
     </div>
   );
 }

@@ -60,6 +60,23 @@ app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
   next();
 });
 
+/* ── Role guard: operators (read-only) may only issue GET requests,
+   except for managing their own session/password. Admins have full access. ── */
+const OPERATOR_ALLOWED_MUTATIONS = ["/api/auth/logout", "/api/auth/change-password"];
+
+app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
+  if (req.method === "GET" || !req.authUser) {
+    next();
+    return;
+  }
+  const fullPath = "/api" + req.path;
+  if (req.authUser.role === "admin" || OPERATOR_ALLOWED_MUTATIONS.includes(fullPath)) {
+    next();
+    return;
+  }
+  res.status(403).json({ error: "Нямате права за това действие" });
+});
+
 /* ── Serve uploaded photos ── */
 app.use("/api/uploads", express.static(path.resolve(workspaceRoot, "artifacts/api-server/uploads")));
 

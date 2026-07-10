@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 const editSchema = z.object({
   firstName: z.string().min(1, "Задължително"),
@@ -39,6 +40,8 @@ export default function EmployeeList() {
   const updateEmployee = useUpdateEmployee();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const form = useForm<z.infer<typeof editSchema>>({
     resolver: zodResolver(editSchema),
@@ -85,6 +88,7 @@ export default function EmployeeList() {
   return (
     <div className="space-y-6">
       {/* Edit dialog */}
+      {isAdmin && (
       <Dialog open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle>Редактиране на служител</DialogTitle></DialogHeader>
@@ -144,14 +148,17 @@ export default function EmployeeList() {
           </Form>
         </DialogContent>
       </Dialog>
+      )}
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Регистър на персонала</h1>
+        {isAdmin && (
         <Link href="/employees/new">
           <Button className="font-mono text-xs uppercase tracking-wider">
             <Plus className="mr-2 h-4 w-4" /> Регистрирай служител
           </Button>
         </Link>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 items-center bg-card p-4 rounded-lg border border-border">
@@ -220,6 +227,7 @@ export default function EmployeeList() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      {isAdmin && (
                       <div className="flex items-center justify-end gap-1">
                       <Button
                         variant="ghost"
@@ -254,6 +262,7 @@ export default function EmployeeList() {
                         </AlertDialogContent>
                       </AlertDialog>
                       </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

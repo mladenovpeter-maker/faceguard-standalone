@@ -15,6 +15,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 const DAYS = [
   { iso: 1, label: "Понеделник" },
@@ -39,7 +40,7 @@ const slotSchema = z.object({
 });
 type SlotForm = z.infer<typeof slotSchema>;
 
-function DepartmentScheduleCard({ departmentId, departmentName }: { departmentId: number; departmentName: string }) {
+function DepartmentScheduleCard({ departmentId, departmentName, isAdmin }: { departmentId: number; departmentName: string; isAdmin: boolean }) {
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -100,17 +101,20 @@ function DepartmentScheduleCard({ departmentId, departmentName }: { departmentId
               <div key={s.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
                 <span className="font-medium w-32">{DAYS.find((d) => d.iso === s.dayOfWeek)?.label}</span>
                 <span className="font-mono text-muted-foreground">{s.startTime} — {s.endTime}</span>
+                {isAdmin && (
                 <Button
                   variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
                   onClick={() => onDelete(s.id)}
                 >
                   <X className="h-3 w-3" />
                 </Button>
+                )}
               </div>
             ))
           )}
         </div>
 
+        {isAdmin && (
         <div className="border-t border-border pt-4">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Добави / Замени работно време</p>
           <Form {...form}>
@@ -175,6 +179,7 @@ function DepartmentScheduleCard({ departmentId, departmentName }: { departmentId
             </form>
           </Form>
         </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -182,6 +187,8 @@ function DepartmentScheduleCard({ departmentId, departmentName }: { departmentId
 
 export default function DepartmentSchedulesPage() {
   const { data: departments, isLoading } = useListDepartments();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -197,7 +204,7 @@ export default function DepartmentSchedulesPage() {
       ) : departments && departments.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {departments.map((dept) => (
-            <DepartmentScheduleCard key={dept.id} departmentId={dept.id} departmentName={dept.name} />
+            <DepartmentScheduleCard key={dept.id} departmentId={dept.id} departmentName={dept.name} isAdmin={isAdmin} />
           ))}
         </div>
       ) : (

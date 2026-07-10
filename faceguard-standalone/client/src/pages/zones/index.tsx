@@ -20,6 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 /* ─── Zone form ─── */
 const zoneSchema = z.object({
@@ -99,7 +100,7 @@ const slotSchema = z.object({
 });
 type SlotForm = z.infer<typeof slotSchema>;
 
-function WorkScheduleDialog({ zoneId, zoneName }: { zoneId: number; zoneName: string }) {
+function WorkScheduleDialog({ zoneId, zoneName, isAdmin }: { zoneId: number; zoneName: string; isAdmin: boolean }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -168,18 +169,21 @@ function WorkScheduleDialog({ zoneId, zoneName }: { zoneId: number; zoneName: st
               <div key={s.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
                 <span className="font-medium w-32">{DAYS.find((d) => d.iso === s.dayOfWeek)?.label}</span>
                 <span className="font-mono text-muted-foreground">{s.startTime} — {s.endTime}</span>
+                {isAdmin && (
                 <Button
                   variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
                   onClick={() => onDelete(s.id)}
                 >
                   <X className="h-3 w-3" />
                 </Button>
+                )}
               </div>
             ))
           )}
         </div>
 
         {/* Add slot form */}
+        {isAdmin && (
         <div className="border-t border-border pt-4">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Добави / Замени работно време</p>
           <Form {...form}>
@@ -243,6 +247,7 @@ function WorkScheduleDialog({ zoneId, zoneName }: { zoneId: number; zoneName: st
             </form>
           </Form>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -258,6 +263,8 @@ export default function ZoneList() {
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
   const [editZone, setEditZone] = useState<{ id: number; name: string; description?: string | null; accessLevel: string } | null>(null);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListZonesQueryKey() });
 
@@ -287,6 +294,7 @@ export default function ZoneList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Зони</h1>
+        {isAdmin && (
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button className="font-mono text-xs uppercase tracking-wider">
@@ -303,9 +311,11 @@ export default function ZoneList() {
             />
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Edit dialog */}
+      {isAdmin && (
       <Dialog open={!!editZone} onOpenChange={(o) => !o && setEditZone(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Редактиране на зона</DialogTitle></DialogHeader>
@@ -323,6 +333,7 @@ export default function ZoneList() {
           )}
         </DialogContent>
       </Dialog>
+      )}
 
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         <Table>
@@ -353,8 +364,10 @@ export default function ZoneList() {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       {/* Work schedule */}
-                      <WorkScheduleDialog zoneId={zone.id} zoneName={zone.name} />
+                      <WorkScheduleDialog zoneId={zone.id} zoneName={zone.name} isAdmin={isAdmin} />
 
+                      {isAdmin && (
+                      <>
                       {/* Edit */}
                       <Button
                         variant="ghost" size="icon"
@@ -386,6 +399,8 @@ export default function ZoneList() {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                      </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

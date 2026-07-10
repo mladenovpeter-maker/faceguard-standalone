@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 const ruleSchema = z.object({
   employeeId: z.coerce.number().min(1, "Изберете служител"),
@@ -29,6 +30,8 @@ export default function AccessRulesList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const form = useForm<z.infer<typeof ruleSchema>>({
     resolver: zodResolver(ruleSchema),
@@ -54,6 +57,7 @@ export default function AccessRulesList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Права за достъп</h1>
+        {isAdmin && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="font-mono text-xs uppercase tracking-wider">
@@ -101,6 +105,7 @@ export default function AccessRulesList() {
             </Form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="bg-card rounded-lg border border-border overflow-hidden">
@@ -127,6 +132,7 @@ export default function AccessRulesList() {
                     {new Date(rule.createdAt).toLocaleDateString('bg-BG')}
                   </TableCell>
                   <TableCell className="text-right">
+                    {isAdmin && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
@@ -148,6 +154,7 @@ export default function AccessRulesList() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

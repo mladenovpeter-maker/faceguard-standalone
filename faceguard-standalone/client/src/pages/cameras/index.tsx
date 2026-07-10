@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 const cameraSchema = z.object({
   name: z.string().min(1, "Задължително"),
@@ -150,6 +151,8 @@ export default function CameraList() {
   const { toast } = useToast();
   const [editCamera, setEditCamera] = useState<CameraRow | null>(null);
   const [snapshot, setSnapshot] = useState<{ cameraName: string; imageBase64: string } | null>(null);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListCamerasQueryKey() });
 
@@ -189,11 +192,13 @@ export default function CameraList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Камери</h1>
+        {isAdmin && (
         <Link href="/cameras/new">
           <Button className="font-mono text-xs uppercase tracking-wider">
             <Plus className="mr-2 h-4 w-4" /> Добави камера
           </Button>
         </Link>
+        )}
       </div>
 
       {/* Snapshot dialog */}
@@ -207,6 +212,7 @@ export default function CameraList() {
       </Dialog>
 
       {/* Edit dialog */}
+      {isAdmin && (
       <Dialog open={!!editCamera} onOpenChange={(o) => !o && setEditCamera(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader><DialogTitle>Редактиране на камера</DialogTitle></DialogHeader>
@@ -221,6 +227,7 @@ export default function CameraList() {
           )}
         </DialogContent>
       </Dialog>
+      )}
 
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         <Table>
@@ -253,6 +260,7 @@ export default function CameraList() {
                   <TableCell>{camera.zoneName}</TableCell>
                   <TableCell><StatusBadge status={camera.status} /></TableCell>
                   <TableCell className="text-right">
+                    {isAdmin && (
                     <div className="flex justify-end gap-1">
                       <Button
                         variant="outline" size="sm" className="font-mono text-xs h-7 mr-1"
@@ -290,6 +298,7 @@ export default function CameraList() {
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

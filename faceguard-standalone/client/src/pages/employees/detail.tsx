@@ -18,6 +18,7 @@ import { z } from "zod";
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 const editSchema = z.object({
   firstName: z.string().min(1, "Задължително"),
@@ -48,6 +49,8 @@ export default function EmployeeDetail() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const MAX_PHOTOS = 5;
   const [captureOpen, setCaptureOpen] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   function handleAddPhotoClick() {
     photoInputRef.current?.click();
@@ -151,6 +154,7 @@ export default function EmployeeDetail() {
         <Badge variant="outline" className={employee.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-muted text-muted-foreground'}>
           {employee.status === 'active' ? 'АКТИВЕН' : 'НЕАКТИВЕН'}
         </Badge>
+        {isAdmin && (
         <div className="ml-auto flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
             <Pencil className="h-4 w-4 mr-2" /> Редактирай
@@ -177,9 +181,11 @@ export default function EmployeeDetail() {
             </AlertDialogContent>
           </AlertDialog>
         </div>
+        )}
       </div>
 
       {/* Edit dialog */}
+      {isAdmin && (
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle>Редактиране на служител</DialogTitle></DialogHeader>
@@ -227,6 +233,7 @@ export default function EmployeeDetail() {
           </Form>
         </DialogContent>
       </Dialog>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="col-span-1 border-border bg-card">
@@ -283,6 +290,7 @@ export default function EmployeeDetail() {
                 className="hidden"
                 onChange={handlePhotoFileChange}
               />
+              {isAdmin && (
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -302,6 +310,7 @@ export default function EmployeeDetail() {
                   <CameraIcon className="h-4 w-4 mr-2" /> От камера
                 </Button>
               </div>
+              )}
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground mb-4">
@@ -330,6 +339,7 @@ export default function EmployeeDetail() {
                           <ShieldAlert className="h-3.5 w-3.5 text-white" />
                         )}
                       </div>
+                      {isAdmin && (
                       <button
                         type="button"
                         onClick={() => handleDeletePhoto(photo.id)}
@@ -338,6 +348,7 @@ export default function EmployeeDetail() {
                       >
                         <X className="h-3 w-3" />
                       </button>
+                      )}
                     </div>
                   ))}
                 </div>

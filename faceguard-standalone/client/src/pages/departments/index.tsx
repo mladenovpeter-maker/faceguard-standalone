@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 const departmentSchema = z.object({
   name: z.string().min(1, "Наименованието е задължително"),
@@ -56,6 +57,8 @@ export default function DepartmentList() {
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
   const [editDept, setEditDept] = useState<{ id: number; name: string } | null>(null);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
 
@@ -85,6 +88,7 @@ export default function DepartmentList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Отдели</h1>
+        {isAdmin && (
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button className="font-mono text-xs uppercase tracking-wider">
@@ -101,9 +105,11 @@ export default function DepartmentList() {
             />
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Edit dialog */}
+      {isAdmin && (
       <Dialog open={!!editDept} onOpenChange={(o) => !o && setEditDept(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Редактиране на отдел</DialogTitle></DialogHeader>
@@ -117,6 +123,7 @@ export default function DepartmentList() {
           )}
         </DialogContent>
       </Dialog>
+      )}
 
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         <Table>
@@ -146,6 +153,7 @@ export default function DepartmentList() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
+                    {isAdmin && (
                     <div className="flex justify-end gap-1">
                       <Button
                         variant="ghost" size="icon"
@@ -183,6 +191,7 @@ export default function DepartmentList() {
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
