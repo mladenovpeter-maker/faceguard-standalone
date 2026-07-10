@@ -1,0 +1,39 @@
+# Standalone build image for the FaceGuard API server + camera-ingestion worker.
+# Build from the REPO ROOT:
+#   docker build -f Dockerfile.api-server -t faceguard-api .
+FROM node:24-bookworm-slim AS build
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ pkg-config \
+    libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /repo
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* tsconfig.json tsconfig.base.json ./
+COPY lib ./lib
+COPY server ./server
+
+RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm --filter @workspace/db... run build --if-present
+RUN pnpm --filter @workspace/api-server run build
+
+# `pnpm deploy` writes a self-contained folder with REAL files (not pnpm's
+# usual symlinks into a shared content-addressable store), which is what we
+# need in the runtime stage below since it doesn't have that store available.
+RUN pnpm --filter @workspace/api-server deploy --prod /deploy/api-server
+
+FROM node:24-bookworm-slim AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg libcairo2 libpango-1.0-0 libjpeg62-turbo libgif7 librsvg2-2 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=build /deploy/api-server/node_modules ./node_modules
+COPY --from=build /repo/server/dist ./dist
+COPY --from=build /repo/server/models ./models
+
+ENV NODE_ENV=production
+EXPOSE 8080
+
+CMD ["node", "--enable-source-maps", "dist/index.mjs"]
