@@ -365,6 +365,18 @@ export const TestCameraConnectionResponse = zod.object({
 
 
 /**
+ * @summary Capture a still frame from a camera (used for employee photo enrollment)
+ */
+export const CaptureCameraFrameParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CaptureCameraFrameResponse = zod.object({
+  "snapshotBase64": zod.string()
+})
+
+
+/**
  * @summary List all zones/rooms
  */
 export const ListZonesResponseItem = zod.object({

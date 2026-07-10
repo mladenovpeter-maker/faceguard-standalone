@@ -8,11 +8,13 @@ import {
   UpdateCameraBody,
   DeleteCameraParams,
   TestCameraConnectionParams,
+  CaptureCameraFrameParams,
   ListCamerasResponse,
   CreateCameraResponse,
   GetCameraResponse,
   UpdateCameraResponse,
   TestCameraConnectionResponse,
+  CaptureCameraFrameResponse,
 } from "@workspace/api-zod";
 import { captureFrame, sanitizeError } from "../lib/camera-capture";
 
@@ -200,6 +202,38 @@ router.post("/cameras/:id/test", async (req, res): Promise<void> => {
       message: `Could not connect to ${camera.brand.toUpperCase()} camera at ${camera.host}: ${message}`,
       latencyMs: Date.now() - start,
     }));
+  }
+});
+
+router.post("/cameras/:id/capture", async (req, res): Promise<void> => {
+  const params = CaptureCameraFrameParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [camera] = await db
+    .select()
+    .from(camerasTable)
+    .where(eq(camerasTable.id, params.data.id));
+
+  if (!camera) {
+    res.status(404).json({ error: "Camera not found" });
+    return;
+  }
+
+  try {
+    const frame = await captureFrame(camera);
+    res.json(CaptureCameraFrameResponse.parse({
+      snapshotBase64: `data:image/jpeg;base64,${frame.toString("base64")}`,
+    }));
+  } catch (err) {
+    const sanitized = sanitizeError(err);
+    const message =
+      sanitized && typeof sanitized === "object" && "message" in sanitized
+        ? String((sanitized as { message: unknown }).message)
+        : String(sanitized);
+    res.status(502).json({ error: `Could not capture frame from ${camera.brand.toUpperCase()} camera at ${camera.host}: ${message}` });
   }
 });
 

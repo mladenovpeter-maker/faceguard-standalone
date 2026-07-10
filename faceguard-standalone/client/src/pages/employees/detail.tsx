@@ -1,6 +1,7 @@
 import { useGetEmployee, useUpdateEmployee, useDeleteEmployee, useListRecognitions, useListDepartments, getListEmployeesQueryKey, useListEmployeePhotos, useAddEmployeePhoto, useDeleteEmployeePhoto, getListEmployeePhotosQueryKey } from "@workspace/api-client-react";
 import { useParams, useLocation } from "wouter";
-import { ArrowLeft, User, Phone, Mail, Building, Briefcase, Calendar, Pencil, Trash2, ScanFace, Plus, X, ShieldCheck, ShieldAlert } from "lucide-react";
+import { ArrowLeft, User, Phone, Mail, Building, Briefcase, Calendar, Pencil, Trash2, ScanFace, Plus, X, ShieldCheck, ShieldAlert, Camera as CameraIcon } from "lucide-react";
+import { CameraCaptureDialog } from "@/components/camera-capture-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,9 +47,25 @@ export default function EmployeeDetail() {
   const deletePhoto = useDeleteEmployeePhoto();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const MAX_PHOTOS = 5;
+  const [captureOpen, setCaptureOpen] = useState(false);
 
   function handleAddPhotoClick() {
     photoInputRef.current?.click();
+  }
+
+  function handleCapturedPhoto(photoBase64: string) {
+    addPhoto.mutate({ id: employeeId, data: { photoBase64 } }, {
+      onSuccess: (photo) => {
+        toast({
+          title: "Снимката е добавена",
+          description: photo.hasFaceDescriptor
+            ? "Лицето е разпознато и запазено за AI съвпадение."
+            : "Не бе открито лице на снимката — тя ще се показва, но няма да се използва за AI разпознаване.",
+        });
+        queryClient.invalidateQueries({ queryKey: getListEmployeePhotosQueryKey(employeeId) });
+      },
+      onError: (err: any) => toast({ title: "Грешка при качване", description: err.message, variant: "destructive" }),
+    });
   }
 
   function handlePhotoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -266,15 +283,25 @@ export default function EmployeeDetail() {
                 className="hidden"
                 onChange={handlePhotoFileChange}
               />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAddPhotoClick}
-                disabled={photos.length >= MAX_PHOTOS || addPhoto.isPending}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {addPhoto.isPending ? "Качване..." : "Добави снимка"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddPhotoClick}
+                  disabled={photos.length >= MAX_PHOTOS || addPhoto.isPending}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {addPhoto.isPending ? "Качване..." : "Качи файл"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCaptureOpen(true)}
+                  disabled={photos.length >= MAX_PHOTOS || addPhoto.isPending}
+                >
+                  <CameraIcon className="h-4 w-4 mr-2" /> От камера
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground mb-4">
@@ -358,6 +385,12 @@ export default function EmployeeDetail() {
           </Card>
         </div>
       </div>
+
+      <CameraCaptureDialog
+        open={captureOpen}
+        onOpenChange={setCaptureOpen}
+        onCapture={handleCapturedPhoto}
+      />
     </div>
   );
 }

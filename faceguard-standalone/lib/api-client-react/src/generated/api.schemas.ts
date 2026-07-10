@@ -278,6 +278,10 @@ export interface CameraTestResult {
   snapshotBase64?: string | null;
 }
 
+export interface CameraCaptureResult {
+  snapshotBase64: string;
+}
+
 export type ZoneAccessLevel = typeof ZoneAccessLevel[keyof typeof ZoneAccessLevel];
 
 

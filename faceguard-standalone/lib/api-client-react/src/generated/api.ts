@@ -27,6 +27,7 @@ import type {
   Camera,
   CameraInput,
   CameraTestResult,
+  CameraCaptureResult,
   CameraUpdate,
   DashboardSummary,
   Department,
@@ -1260,6 +1261,75 @@ export const useTestCameraConnection = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getTestCameraConnectionMutationOptions(options));
+    }
+
+export const getCaptureCameraFrameUrl = (id: number,) => {
+
+
+
+
+  return `/api/cameras/${id}/capture`
+}
+
+/**
+ * @summary Capture a still frame from a camera (used for employee photo enrollment)
+ */
+export const captureCameraFrame = async (id: number, options?: RequestInit): Promise<CameraCaptureResult> => {
+
+  return customFetch<CameraCaptureResult>(getCaptureCameraFrameUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCaptureCameraFrameMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof captureCameraFrame>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof captureCameraFrame>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['captureCameraFrame'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof captureCameraFrame>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  captureCameraFrame(id,requestOptions)
+        }
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CaptureCameraFrameMutationResult = NonNullable<Awaited<ReturnType<typeof captureCameraFrame>>>
+
+    export type CaptureCameraFrameMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Capture a still frame from a camera (used for employee photo enrollment)
+ */
+export const useCaptureCameraFrame = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof captureCameraFrame>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof captureCameraFrame>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getCaptureCameraFrameMutationOptions(options));
     }
 
 export const getListZonesUrl = () => {

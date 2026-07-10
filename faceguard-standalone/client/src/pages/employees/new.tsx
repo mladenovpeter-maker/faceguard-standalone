@@ -8,8 +8,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload, Plus, X, ScanFace } from "lucide-react";
+import { ArrowLeft, Upload, Plus, X, ScanFace, Camera as CameraIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CameraCaptureDialog } from "@/components/camera-capture-dialog";
 import { useState, useRef } from "react";
 
 const MAX_PHOTOS = 5;
@@ -35,6 +36,7 @@ export default function EmployeeNew() {
 
   const [photos, setPhotos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
 
   const form = useForm<z.infer<typeof employeeSchema>>({
     resolver: zodResolver(employeeSchema),
@@ -149,15 +151,28 @@ export default function EmployeeNew() {
                       ))}
                     </div>
                   )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={photos.length >= MAX_PHOTOS}
-                  >
-                    <Plus className="h-4 w-4 mr-2" /> Добави снимка
-                  </Button>
+                  <div className="w-full flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={photos.length >= MAX_PHOTOS}
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Качи файл
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setCaptureOpen(true)}
+                      disabled={photos.length >= MAX_PHOTOS}
+                    >
+                      <CameraIcon className="h-4 w-4 mr-2" /> От камера
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground text-center px-4">
                     Добавете 2–5 ясни, добре осветени снимки от различни ъгли за по-точно разпознаване.
                   </p>
@@ -213,6 +228,12 @@ export default function EmployeeNew() {
           </div>
         </form>
       </Form>
+
+      <CameraCaptureDialog
+        open={captureOpen}
+        onOpenChange={setCaptureOpen}
+        onCapture={(photoBase64) => setPhotos((prev) => [...prev, photoBase64])}
+      />
     </div>
   );
 }
