@@ -5,14 +5,14 @@
 #   docker build -f Dockerfile.face-guard -t faceguard-web .
 FROM node:24-bookworm-slim AS build
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 
 WORKDIR /repo
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* tsconfig.json tsconfig.base.json ./
+COPY pnpm-workspace.yaml package.json .npmrc* tsconfig.json tsconfig.base.json ./
 COPY lib ./lib
 COPY client ./client
 
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --no-frozen-lockfile
 
 ENV PORT=5173
 ENV BASE_PATH=/

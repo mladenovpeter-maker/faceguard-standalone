@@ -3,18 +3,22 @@
 #   docker build -f Dockerfile.api-server -t faceguard-api .
 FROM node:24-bookworm-slim AS build
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Pinned exact version (not "latest") so build-script approval behavior
+# (onlyBuiltDependencies in pnpm-workspace.yaml, needed for `canvas`/`esbuild`
+# native builds) stays consistent instead of drifting with new pnpm releases.
+RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 make g++ pkg-config \
     libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /repo
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* tsconfig.json tsconfig.base.json ./
+COPY pnpm-workspace.yaml package.json .npmrc* tsconfig.json tsconfig.base.json ./
 COPY lib ./lib
 COPY server ./server
 
-RUN pnpm install --frozen-lockfile || pnpm install
+# No lockfile is committed in this standalone repo, so always resolve fresh.
+RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @workspace/db... run build --if-present
 RUN pnpm --filter @workspace/api-server run build
 
