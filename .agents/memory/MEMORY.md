@@ -1,1 +1,2 @@
 - [Standalone GitHub export from pnpm monorepo](standalone-repo-export.md) — how to carve a self-contained sub-app out of this workspace into its own git repo.
+- [FaceGuard standalone deploy](faceguard-standalone-deploy.md) — self-hosted home-server app; Cloudflare Tunnel exposes it externally via nginx-fronted docker-compose stack.
