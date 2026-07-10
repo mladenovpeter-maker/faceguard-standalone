@@ -1,0 +1,84 @@
+tmm@tmm:~/faceguard-standalone$ git fetch origin && git reset --hard origin/main
+docker compose -f selfhost/docker-compose.yml --env-file selfhost/.env up --build -d
+remote: Enumerating objects: 5, done.
+remote: Counting objects: 100% (5/5), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (3/3), 384 bytes | 384.00 KiB/s, done.
+From https://github.com/mladenovpeter-maker/faceguard-standalone
+   995e658..e52846d  main       -> origin/main
+HEAD is now at e52846d Allow canvas/core-js/esbuild build scripts for pnpm in Docker builds
+WARN[0000] Docker Compose is configured to build using Bake, but buildx isn't installed 
+[+] Building 18.9s (13/21)                                                                          docker:default
+ => [api-server internal] load build definition from Dockerfile.api-server                                    0.0s
+ => => transferring dockerfile: 1.72kB                                                                        0.0s
+ => [api-server internal] load metadata for docker.io/library/node:24-bookworm-slim                           0.0s
+ => [api-server internal] load .dockerignore                                                                  0.0s
+ => => transferring context: 2B                                                                               0.0s
+ => [api-server internal] load build context                                                                  0.0s
+ => => transferring context: 11.48kB                                                                          0.0s
+ => [api-server build  1/12] FROM docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c  0.0s
+ => => resolve docker.io/library/node:24-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c29e27bf9befc8f5a26c  0.0s
+ => CACHED [api-server build  2/12] RUN corepack enable && corepack prepare pnpm@latest --activate            0.0s
+ => CACHED [api-server build  3/12] RUN apt-get update && apt-get install -y --no-install-recommends     pyt  0.0s
+ => CACHED [api-server build  4/12] WORKDIR /repo                                                             0.0s
+ => [api-server build  5/12] COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* ./                 0.1s
+ => [api-server build  6/12] COPY lib ./lib                                                                   0.1s
+ => [api-server build  7/12] COPY artifacts/api-server ./artifacts/api-server                                 0.1s
+ => [api-server build  8/12] COPY scripts ./scripts                                                           0.1s
+ => ERROR [api-server build  9/12] RUN pnpm install --frozen-lockfile || pnpm install                        18.3s
+------                                                                                                             
+ > [api-server build  9/12] RUN pnpm install --frozen-lockfile || pnpm install:                                    
+0.910 [WARN] The "pnpm" field in package.json is no longer read by pnpm. The following keys were ignored: "pnpm.onlyBuiltDependencies". See https://pnpm.io/settings for the new home of each setting.                                
+0.944 Scope: all 7 workspace projects                                                                              
+1.062 ? Verifying lockfile against supply-chain policies (569 entries)...                                          
+1.071 Lockfile is up to date, resolution step is skipped
+1.168 Progress: resolved 1, reused 0, downloaded 0, added 0
+1.212 Packages: +336
+1.212 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2.169 Progress: resolved 336, reused 0, downloaded 51, added 51
+3.169 Progress: resolved 336, reused 0, downloaded 105, added 105
+3.173 [WARN] Tarball download average speed 3 KiB/s (size 5 KiB) is below 50 KiB/s: https://registry.npmjs.org/call-bind-apply-helpers/-/call-bind-apply-helpers-1.0.2.tgz (GET)
+4.169 Progress: resolved 336, reused 0, downloaded 173, added 173
+5.169 Progress: resolved 336, reused 0, downloaded 232, added 232
+6.168 Progress: resolved 336, reused 0, downloaded 315, added 315
+7.169 Progress: resolved 336, reused 0, downloaded 325, added 325
+8.174 Progress: resolved 336, reused 0, downloaded 329, added 329
+8.417 [WARN] Tarball download average speed 1 KiB/s (size 7 KiB) is below 50 KiB/s: https://registry.npmjs.org/asynckit/-/asynckit-0.4.0.tgz (GET)
+9.174 Progress: resolved 336, reused 0, downloaded 330, added 330
+10.26 Progress: resolved 336, reused 0, downloaded 332, added 331
+11.26 Progress: resolved 336, reused 0, downloaded 334, added 334
+12.15 ✓ Lockfile passes supply-chain policies (569 entries in 11s)
+12.26 Progress: resolved 336, reused 0, downloaded 335, added 335
+13.92 Progress: resolved 336, reused 0, downloaded 336, added 335
+13.92 Progress: resolved 336, reused 0, downloaded 336, added 336, done
+14.15 
+14.15 devDependencies:
+14.15 + prettier 3.8.4
+14.15 + typescript 5.9.3
+14.15 
+14.17 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+14.20 . preinstall: Done
+14.28 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: canvas@3.2.3, core-js@3.29.1, esbuild@0.27.3
+14.28 
+14.28 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+14.98 [WARN] The "pnpm" field in package.json is no longer read by pnpm. The following keys were ignored: "pnpm.onlyBuiltDependencies". See https://pnpm.io/settings for the new home of each setting.
+15.02 Scope: all 7 workspace projects
+15.09 ✓ Lockfile passes supply-chain policies (verified 2s ago)
+15.14 Progress: resolved 1, reused 0, downloaded 0, added 0
+15.15 artifacts/api-server                     | [WARN] deprecated @types/bcryptjs@3.0.0
+16.14 Progress: resolved 148, reused 147, downloaded 0, added 0
+16.51 [WARN] 1 deprecated subdependencies found: prebuild-install@7.1.3
+16.53 Packages: +1 -2
+16.53 +--
+16.55 Progress: resolved 336, reused 335, downloaded 0, added 1, done
+16.72 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+16.75 . preinstall: Done
+16.77 [WARN] Issues with peer dependencies found. Run "pnpm peers check" to list them.
+16.77 
+16.81 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: canvas@3.2.3, core-js@3.29.1, esbuild@0.27.3
+16.81 
+16.81 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+------
+failed to solve: process "/bin/sh -c pnpm install --frozen-lockfile || pnpm install" did not complete successfully: exit code: 1
+tmm@tmm:~/faceguard-standalone$ 
