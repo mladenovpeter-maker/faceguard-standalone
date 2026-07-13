@@ -7,7 +7,8 @@ import {
   ListRecognitionsResponse,
   CreateRecognitionResponse,
 } from "@workspace/api-zod";
-import { computeFaceDescriptor, matchDescriptor, type FaceCandidate } from "../lib/face-recognition";
+import { computeFaceDescriptorAsync } from "../lib/face-recognition-pool";
+import { matchDescriptor, type FaceCandidate } from "../lib/face-recognition";
 
 const router: IRouter = Router();
 
@@ -79,7 +80,7 @@ router.post("/recognitions", async (req, res): Promise<void> => {
     try {
       const base64Data = parsed.data.snapshotBase64.replace(/^data:image\/\w+;base64,/, "");
       const buffer = Buffer.from(base64Data, "base64");
-      const descriptor = await computeFaceDescriptor(buffer);
+      const descriptor = await computeFaceDescriptorAsync(buffer);
 
       if (descriptor) {
         faceDetected = true;
