@@ -5,6 +5,7 @@
  * FaceGuard - Face Recognition Access & Attendance System
  * OpenAPI spec version: 0.1.0
  */
+import type { AttendanceReportRowScheduleStatus } from './attendanceReportRowScheduleStatus';
 
 export interface AttendanceReportRow {
   employeeId: number;
@@ -32,4 +33,10 @@ export interface AttendanceReportRow {
   leaveType?: string | null;
   /** @nullable */
   leaveReason?: string | null;
+  /** @nullable */
+  scheduleStatus?: AttendanceReportRowScheduleStatus;
+  /** @nullable */
+  minutesLate?: number | null;
+  /** @nullable */
+  scheduleStart?: string | null;
 }
