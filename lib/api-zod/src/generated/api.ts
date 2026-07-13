@@ -560,7 +560,10 @@ export const ListAttendanceResponseItem = zod.object({
   "lastSeen": zod.coerce.date(),
   "zoneId": zod.number().nullish(),
   "zoneName": zod.string().nullish(),
-  "totalMinutes": zod.number().nullish()
+  "totalMinutes": zod.number().nullish(),
+  "scheduleStatus": zod.union([zod.literal('on_time'),zod.literal('late'),zod.literal('no_schedule'),zod.literal(null)]).nullish(),
+  "minutesLate": zod.number().nullish(),
+  "scheduleStart": zod.string().nullish()
 })
 export const ListAttendanceResponse = zod.array(ListAttendanceResponseItem)
 
@@ -585,7 +588,10 @@ export const GetTodayAttendanceResponse = zod.object({
   "lastSeen": zod.coerce.date(),
   "zoneId": zod.number().nullish(),
   "zoneName": zod.string().nullish(),
-  "totalMinutes": zod.number().nullish()
+  "totalMinutes": zod.number().nullish(),
+  "scheduleStatus": zod.union([zod.literal('on_time'),zod.literal('late'),zod.literal('no_schedule'),zod.literal(null)]).nullish(),
+  "minutesLate": zod.number().nullish(),
+  "scheduleStart": zod.string().nullish()
 })),
   "absentRecords": zod.array(zod.object({
   "employeeId": zod.number(),
@@ -635,7 +641,10 @@ export const GetAttendanceReportResponse = zod.object({
   "lastSeen": zod.coerce.date().nullish(),
   "zoneName": zod.string().nullish(),
   "leaveType": zod.string().nullish(),
-  "leaveReason": zod.string().nullish()
+  "leaveReason": zod.string().nullish(),
+  "scheduleStatus": zod.union([zod.literal('on_time'),zod.literal('late'),zod.literal('no_schedule'),zod.literal(null)]).nullish(),
+  "minutesLate": zod.number().nullish(),
+  "scheduleStart": zod.string().nullish()
 }))
 })
 
