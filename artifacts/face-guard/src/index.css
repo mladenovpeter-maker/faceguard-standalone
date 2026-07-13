@@ -66,7 +66,7 @@
   --radius-xl: 1rem;
 }
 
-/* LIGHT MODE — Clean white with vivid indigo primary */
+/* LIGHT MODE — Clean white with deep teal primary */
 :root {
   --button-outline: rgba(0,0,0,.08);
   --badge-outline: rgba(0,0,0,.05);
@@ -74,68 +74,67 @@
   --elevate-1: rgba(0,0,0,.03);
   --elevate-2: rgba(0,0,0,.07);
 
-  /* Warm white page background */
-  --background: 220 20% 97%;
-  --foreground: 224 40% 12%;
+  /* Slate-50 page background */
+  --background: 210 20% 98%;
+  --foreground: 215 40% 10%;
 
-  --border: 220 18% 88%;
-  --input: 220 18% 88%;
-  --ring: 237 84% 58%;
+  --border: 215 16% 88%;
+  --input: 215 16% 88%;
+  --ring: 184 71% 20%;
 
   /* Pure white cards */
   --card: 0 0% 100%;
-  --card-foreground: 224 40% 12%;
-  --card-border: 220 18% 90%;
+  --card-foreground: 215 40% 10%;
+  --card-border: 215 16% 90%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 224 40% 12%;
-  --popover-border: 220 18% 88%;
+  --popover-foreground: 215 40% 10%;
+  --popover-border: 215 16% 88%;
 
-  /* Vivid indigo primary */
-  --primary: 237 84% 58%;
+  /* Deep teal primary */
+  --primary: 184 71% 20%;
   --primary-foreground: 0 0% 100%;
-  --primary-border: hsl(237 84% 50%);
+  --primary-border: hsl(184 71% 15%);
 
-  --secondary: 220 16% 94%;
-  --secondary-foreground: 224 40% 18%;
-  --secondary-border: 220 16% 88%;
+  --secondary: 215 16% 94%;
+  --secondary-foreground: 215 40% 18%;
+  --secondary-border: 215 16% 88%;
 
-  --muted: 220 16% 94%;
-  --muted-foreground: 220 14% 50%;
-  --muted-border: 220 16% 90%;
+  --muted: 215 16% 94%;
+  --muted-foreground: 215 14% 50%;
+  --muted-border: 215 16% 90%;
 
-  /* Light indigo accent */
-  --accent: 237 80% 96%;
-  --accent-foreground: 237 84% 40%;
-  --accent-border: 237 60% 88%;
+  /* Light teal accent */
+  --accent: 184 60% 94%;
+  --accent-foreground: 184 71% 20%;
+  --accent-border: 184 50% 84%;
 
   --destructive: 4 86% 57%;
   --destructive-foreground: 0 0% 100%;
   --destructive-border: hsl(4 86% 50%);
 
-  /* Chart colors — vivid and readable */
-  --chart-1: 237 84% 58%;   /* indigo */
+  /* Chart colors */
+  --chart-1: 184 71% 20%;   /* teal */
   --chart-2: 155 72% 40%;   /* green */
   --chart-3: 38 92% 50%;    /* amber */
   --chart-4: 4 86% 57%;     /* red */
   --chart-5: 280 70% 58%;   /* purple */
 
-  /* Sidebar — crisp white with subtle left border */
+  /* Sidebar — crisp white */
   --sidebar: 0 0% 100%;
-  --sidebar-foreground: 224 40% 18%;
-  --sidebar-border: 220 18% 90%;
-  --sidebar-primary: 237 84% 58%;
+  --sidebar-foreground: 215 40% 18%;
+  --sidebar-border: 215 16% 90%;
+  --sidebar-primary: 184 71% 20%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 237 80% 96%;
-  --sidebar-accent-foreground: 237 84% 40%;
-  --sidebar-ring: 237 84% 58%;
+  --sidebar-accent: 184 60% 94%;
+  --sidebar-accent-foreground: 184 71% 20%;
+  --sidebar-ring: 184 71% 20%;
 
-  /* Automatically computed borders */
-  --sidebar-primary-border: hsl(237 84% 50%);
-  --sidebar-accent-border: hsl(237 60% 88%);
-  --secondary-border: hsl(220 16% 86%);
-  --muted-border: hsl(220 16% 88%);
-  --accent-border: hsl(237 60% 88%);
+  --sidebar-primary-border: hsl(184 71% 15%);
+  --sidebar-accent-border: hsl(184 50% 84%);
+  --secondary-border: hsl(215 16% 86%);
+  --muted-border: hsl(215 16% 88%);
+  --accent-border: hsl(184 50% 84%);
 
   --radius: 0.5rem;
 }
