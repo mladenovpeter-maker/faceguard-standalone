@@ -1251,6 +1251,9 @@ components:
           type: string
         latencyMs:
           type: ["integer", "null"]
+        snapshotBase64:
+          type: ["string", "null"]
+          description: Base64-encoded JPEG snapshot from the camera (data:image/jpeg;base64,...)
 
     Zone:
       type: object
