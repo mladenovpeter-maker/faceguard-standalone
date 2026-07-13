@@ -83,22 +83,20 @@ export async function computeFaceDescriptor(imageBuffer: Buffer): Promise<number
   const ctx = canvas.getContext("2d");
   ctx.drawImage(image, 0, 0);
 
-  // --- Primary: SsdMobilenetv1 ---
-  // minConfidence range: 0.1 (very permissive) → 0.5 (default)
-  for (const minConfidence of [0.1, 0.2, 0.3]) {
-    const detection = await faceapi
-      .detectSingleFace(canvas as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence }))
-      .withFaceLandmarks()
-      .withFaceDescriptor();
+  // --- Primary: SsdMobilenetv1 at permissive threshold ---
+  // Frames are pre-scaled to 640px by the camera worker, so one pass is sufficient.
+  const ssdDetection = await faceapi
+    .detectSingleFace(canvas as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.1 }))
+    .withFaceLandmarks()
+    .withFaceDescriptor();
 
-    if (detection) {
-      logger.info({ detector: "ssd", minConfidence, score: detection.detection.score }, "Face detected");
-      return Array.from(detection.descriptor);
-    }
+  if (ssdDetection) {
+    logger.info({ detector: "ssd", score: ssdDetection.detection.score }, "Face detected");
+    return Array.from(ssdDetection.descriptor);
   }
 
-  // --- Secondary: TinyFaceDetector across multiple inputSizes ---
-  for (const inputSize of [160, 224, 320, 416, 512, 608]) {
+  // --- Secondary: TinyFaceDetector at 3 representative sizes ---
+  for (const inputSize of [224, 320, 416]) {
     const detection = await faceapi
       .detectSingleFace(
         canvas as unknown as faceapi.TNetInput,
@@ -109,25 +107,6 @@ export async function computeFaceDescriptor(imageBuffer: Buffer): Promise<number
 
     if (detection) {
       logger.info({ detector: "tiny", inputSize, score: detection.detection.score }, "Face detected");
-      return Array.from(detection.descriptor);
-    }
-  }
-
-  // --- Last resort: try with image rotated 90° (handles EXIF-unaware canvas loaders) ---
-  const rotCanvas = canvasLib.createCanvas(image.height, image.width);
-  const rCtx = rotCanvas.getContext("2d");
-  rCtx.translate(image.height, 0);
-  rCtx.rotate(Math.PI / 2);
-  rCtx.drawImage(image, 0, 0);
-
-  for (const minConfidence of [0.1, 0.2]) {
-    const detection = await faceapi
-      .detectSingleFace(rotCanvas as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence }))
-      .withFaceLandmarks()
-      .withFaceDescriptor();
-
-    if (detection) {
-      logger.info({ detector: "ssd-rotated", minConfidence, score: detection.detection.score }, "Face detected (rotated)");
       return Array.from(detection.descriptor);
     }
   }
