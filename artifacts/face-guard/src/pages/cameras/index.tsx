@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const cameraSchema = z.object({
@@ -149,15 +149,16 @@ export default function CameraList() {
   const { toast } = useToast();
   const [editCamera, setEditCamera] = useState<CameraRow | null>(null);
   const [testingId, setTestingId] = useState<number | null>(null);
+  const [testResult, setTestResult] = useState<{ message: string; snapshotBase64?: string | null; cameraName: string } | null>(null);
   const testCamera = useTestCameraConnection();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListCamerasQueryKey() });
 
-  function handleTest(id: number) {
+  function handleTest(id: number, cameraName: string) {
     setTestingId(id);
     testCamera.mutate({ id }, {
       onSuccess: (result) => {
-        toast({ title: "Връзката е успешна", description: result.message });
+        setTestResult({ message: result.message, snapshotBase64: result.snapshotBase64, cameraName });
         invalidate();
       },
       onError: (err: any) => toast({ title: "Грешка при тест", description: err.message, variant: "destructive" }),
@@ -207,6 +208,25 @@ export default function CameraList() {
         </DialogContent>
       </Dialog>
 
+      {/* Snapshot result dialog */}
+      <Dialog open={!!testResult} onOpenChange={(o) => !o && setTestResult(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Тест на камера — {testResult?.cameraName}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{testResult?.message}</p>
+          {testResult?.snapshotBase64 ? (
+            <div className="rounded-lg overflow-hidden border border-border bg-muted">
+              <img src={testResult.snapshotBase64} alt="Snapshot" className="w-full object-contain max-h-80" />
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-border bg-muted/50 flex items-center justify-center h-32 text-sm text-muted-foreground">
+              Няма снимка — камерата не е достъпна
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         <Table>
           <TableHeader className="bg-muted/50">
@@ -243,7 +263,7 @@ export default function CameraList() {
                         variant="outline" size="sm"
                         className="font-mono text-xs h-7 mr-1"
                         disabled={testingId === camera.id}
-                        onClick={() => handleTest(camera.id)}
+                        onClick={() => handleTest(camera.id, camera.name)}
                       >
                         <Network className="h-3 w-3 mr-1" />
                         {testingId === camera.id ? "..." : "ТЕСТ"}
