@@ -4,7 +4,7 @@ import type { AttendanceReportRow } from "@workspace/api-client-react";
 import {
   User, Search, Calendar, ChevronDown, Clock,
   CheckCircle, XCircle, Plane, TrendingUp, Timer,
-  Building2, Stethoscope, FileX, AlertCircle, CalendarRange,
+  Building2, Stethoscope, FileX, AlertCircle, CalendarRange, AlarmClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -93,26 +93,55 @@ function SectionHeader({ icon: Icon, color, label, count }: { icon: React.Elemen
 
 /* ── Present card (single-day) ─────────────────────────────── */
 
+function ScheduleBadge({ status, minutesLate, scheduleStart }: { status?: string | null; minutesLate?: number | null; scheduleStart?: string | null }) {
+  if (!status || status === "no_schedule") return null;
+  if (status === "late") {
+    const h = Math.floor((minutesLate ?? 0) / 60);
+    const m = (minutesLate ?? 0) % 60;
+    const label = h > 0 ? `Закъснял ${h}ч ${m}м` : `Закъснял ${m}м`;
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 text-red-400 border border-red-400/30 px-2 py-0.5 text-[11px] font-semibold">
+        <AlarmClock className="h-3 w-3" />
+        {label}
+        {scheduleStart && <span className="opacity-60 ml-0.5">· план {scheduleStart}</span>}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[11px] font-semibold">
+      <CheckCircle className="h-3 w-3" />
+      Навреме
+      {scheduleStart && <span className="opacity-60 ml-0.5">· план {scheduleStart}</span>}
+    </span>
+  );
+}
+
 function PresentCard({ row }: { row: AttendanceReportRow }) {
   const mins   = row.totalMinutes ?? 0;
   const fill   = Math.min(100, Math.round((mins / (8 * 60)) * 100));
   const arr    = row.firstSeen ? new Date(row.firstSeen).toLocaleTimeString("bg-BG", { hour: "2-digit", minute: "2-digit" }) : null;
   const dep    = row.lastSeen  ? new Date(row.lastSeen).toLocaleTimeString("bg-BG",  { hour: "2-digit", minute: "2-digit" }) : null;
+  const isLate = row.scheduleStatus === "late";
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3 hover:border-green-500/40 hover:shadow-[0_0_0_1px_hsl(142_71%_45%/0.2)] transition-all">
+    <div className={cn(
+      "bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all",
+      isLate
+        ? "border-red-500/30 hover:border-red-500/50 hover:shadow-[0_0_0_1px_hsl(0_84%_60%/0.2)]"
+        : "border-border hover:border-green-500/40 hover:shadow-[0_0_0_1px_hsl(142_71%_45%/0.2)]"
+    )}>
       <div className="flex items-center gap-3">
         <Avatar name={row.employeeName} photo={row.employeePhotoUrl} />
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate">{row.employeeName}</p>
           <p className="text-xs text-muted-foreground font-mono">{row.employeeNumber} · {row.departmentName}</p>
         </div>
-        <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+        <span className={cn("h-2 w-2 rounded-full shrink-0", isLate ? "bg-red-500" : "bg-green-500 animate-pulse")} />
       </div>
 
-      <div className="flex items-center gap-3 text-xs">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
         {arr && (
-          <div className="flex items-center gap-1.5 bg-green-500/10 text-green-500 rounded-md px-2 py-1">
+          <div className={cn("flex items-center gap-1.5 rounded-md px-2 py-1", isLate ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-500")}>
             <Clock className="h-3 w-3" />
             <span className="font-mono font-bold">{arr}</span>
           </div>
@@ -127,6 +156,10 @@ function PresentCard({ row }: { row: AttendanceReportRow }) {
           <span className="ml-auto text-muted-foreground truncate max-w-[90px] text-[11px]">{row.zoneName}</span>
         )}
       </div>
+
+      {row.scheduleStatus && row.scheduleStatus !== "no_schedule" && (
+        <ScheduleBadge status={row.scheduleStatus} minutesLate={row.minutesLate} scheduleStart={row.scheduleStart} />
+      )}
 
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs">
