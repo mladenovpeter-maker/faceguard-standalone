@@ -17,6 +17,7 @@ import { z } from "zod";
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/auth";
 
 const editSchema = z.object({
   firstName: z.string().min(1, "Задължително"),
@@ -91,18 +92,9 @@ export default function EmployeeDetail() {
   async function handleReprocess() {
     setReprocessing(true);
     try {
-      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const res = await fetch(`${base}/api/employees/${employeeId}/photos/reprocess`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error ?? `HTTP ${res.status}`);
-      }
-      const data = await res.json();
-      const found = data.found ?? 0;
-      const total = data.total ?? 0;
+      const data = await apiFetch(`/api/employees/${employeeId}/photos/reprocess`, { method: "POST" });
+      const found = (data as any).found ?? 0;
+      const total = (data as any).total ?? 0;
       toast({
         title: found > 0 ? `Лице открито в ${found} от ${total} снимки` : `Не е открито лице`,
         description: found > 0
