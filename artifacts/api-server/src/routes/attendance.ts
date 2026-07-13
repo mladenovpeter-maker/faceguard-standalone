@@ -66,29 +66,64 @@ function toMin(t: string): number {
   return h * 60 + m;
 }
 
-const LATE_GRACE_MINUTES = 5;
+const LATE_GRACE_MINUTES  = 5;
+const EARLY_GRACE_MINUTES = 5;
 
 type ScheduleInfo = {
   scheduleStatus: "on_time" | "late" | "no_schedule";
-  minutesLate: number | null;
-  scheduleStart: string | null;
+  minutesLate:    number | null;
+  scheduleStart:  string | null;
+  scheduleEnd:    string | null;
+  earlyDeparture: boolean | null;
+  minutesEarly:   number | null;
 };
 
 function computeScheduleInfo(
   firstSeen: string | Date | null,
-  scheduleStartTime: string | null
+  lastSeen:  string | Date | null,
+  scheduleStartTime: string | null,
+  scheduleEndTime:   string | null,
 ): ScheduleInfo {
-  if (!scheduleStartTime || !firstSeen) {
-    return { scheduleStatus: "no_schedule", minutesLate: null, scheduleStart: null };
+  const noSched: ScheduleInfo = {
+    scheduleStatus: "no_schedule",
+    minutesLate: null, scheduleStart: null,
+    scheduleEnd: null, earlyDeparture: null, minutesEarly: null,
+  };
+  if (!scheduleStartTime || !firstSeen) return noSched;
+
+  // Late arrival
+  const dFirst = new Date(firstSeen);
+  const actualStartMin = dFirst.getHours() * 60 + dFirst.getMinutes();
+  const schedStartMin  = toMin(scheduleStartTime);
+  const diffLate = actualStartMin - schedStartMin;
+  const status = diffLate > LATE_GRACE_MINUTES ? "late" : "on_time";
+  const minutesLate = diffLate > 0 ? diffLate : 0;
+
+  // Early departure
+  let earlyDeparture: boolean | null = null;
+  let minutesEarly:   number | null  = null;
+  if (scheduleEndTime && lastSeen) {
+    const dLast = new Date(lastSeen);
+    const actualEndMin = dLast.getHours() * 60 + dLast.getMinutes();
+    const schedEndMin  = toMin(scheduleEndTime);
+    const diffEarly    = schedEndMin - actualEndMin;
+    if (diffEarly > EARLY_GRACE_MINUTES) {
+      earlyDeparture = true;
+      minutesEarly   = diffEarly;
+    } else {
+      earlyDeparture = false;
+      minutesEarly   = 0;
+    }
   }
-  const d = new Date(firstSeen);
-  const actualMin = d.getHours() * 60 + d.getMinutes();
-  const schedMin = toMin(scheduleStartTime);
-  const diff = actualMin - schedMin;
-  if (diff > LATE_GRACE_MINUTES) {
-    return { scheduleStatus: "late", minutesLate: diff, scheduleStart: scheduleStartTime };
-  }
-  return { scheduleStatus: "on_time", minutesLate: diff > 0 ? diff : 0, scheduleStart: scheduleStartTime };
+
+  return {
+    scheduleStatus: status,
+    minutesLate,
+    scheduleStart: scheduleStartTime,
+    scheduleEnd:   scheduleEndTime ?? null,
+    earlyDeparture,
+    minutesEarly,
+  };
 }
 
 /* ── schedule join expression ── */
@@ -97,35 +132,40 @@ const dayOfWeekExpr = sql<number>`EXTRACT(ISODOW FROM ${attendanceTable.date}::d
 /* ── routes ── */
 
 router.get("/attendance", async (req, res): Promise<void> => {
-  const query = ListAttendanceQueryParams.safeParse(req.query);
-  if (!query.success) {
-    res.status(400).json({ error: query.error.message });
-    return;
-  }
+  const raw = req.query as Record<string, string | undefined>;
+  const { date, from, to, zoneId: zoneIdRaw } = raw;
+  const employeeIdRaw  = raw.employeeId;
+  const departmentIdRaw = raw.departmentId;
 
-  const { date, employeeId } = query.data;
   const conditions = [];
-  if (date) conditions.push(eq(attendanceTable.date, String(date)));
-  if (employeeId != null) conditions.push(eq(attendanceTable.employeeId, employeeId));
+  if (date)           conditions.push(eq(attendanceTable.date, date));
+  if (from && !date)  conditions.push(gte(attendanceTable.date, from));
+  if (to   && !date)  conditions.push(lte(attendanceTable.date, to));
+  if (employeeIdRaw != null)   conditions.push(eq(attendanceTable.employeeId, Number(employeeIdRaw)));
+  if (zoneIdRaw     != null)   conditions.push(eq(attendanceTable.zoneId, Number(zoneIdRaw)));
+  if (departmentIdRaw != null) conditions.push(eq(employeesTable.departmentId, Number(departmentIdRaw)));
 
   const records = await db
     .select({
-      id: attendanceTable.id,
-      employeeId: attendanceTable.employeeId,
-      employeeName: sql<string | null>`concat(${employeesTable.firstName}, ' ', ${employeesTable.lastName})`,
-      employeeNumber: employeesTable.employeeNumber,
+      id:               attendanceTable.id,
+      employeeId:       attendanceTable.employeeId,
+      employeeName:     sql<string | null>`concat(${employeesTable.firstName}, ' ', ${employeesTable.lastName})`,
+      employeeNumber:   employeesTable.employeeNumber,
       employeePhotoUrl: employeesTable.photoUrl,
-      date: attendanceTable.date,
-      firstSeen: attendanceTable.firstSeen,
-      lastSeen: attendanceTable.lastSeen,
-      zoneId: attendanceTable.zoneId,
-      zoneName: zonesTable.name,
-      totalMinutes: attendanceTable.totalMinutes,
+      departmentName:   departmentsTable.name,
+      date:             attendanceTable.date,
+      firstSeen:        attendanceTable.firstSeen,
+      lastSeen:         attendanceTable.lastSeen,
+      zoneId:           attendanceTable.zoneId,
+      zoneName:         zonesTable.name,
+      totalMinutes:     attendanceTable.totalMinutes,
       scheduleStartTime: departmentWorkSchedulesTable.startTime,
+      scheduleEndTime:   departmentWorkSchedulesTable.endTime,
     })
     .from(attendanceTable)
-    .leftJoin(employeesTable, eq(employeesTable.id, attendanceTable.employeeId))
-    .leftJoin(zonesTable, eq(zonesTable.id, attendanceTable.zoneId))
+    .leftJoin(employeesTable,  eq(employeesTable.id, attendanceTable.employeeId))
+    .leftJoin(departmentsTable, eq(departmentsTable.id, employeesTable.departmentId))
+    .leftJoin(zonesTable,      eq(zonesTable.id, attendanceTable.zoneId))
     .leftJoin(
       departmentWorkSchedulesTable,
       and(
@@ -137,8 +177,19 @@ router.get("/attendance", async (req, res): Promise<void> => {
     .orderBy(attendanceTable.firstSeen);
 
   const result = records.map((r) => {
-    const { scheduleStatus, minutesLate, scheduleStart } = computeScheduleInfo(r.firstSeen, r.scheduleStartTime ?? null);
-    return { ...r, scheduleStatus, minutesLate, scheduleStart };
+    const si = computeScheduleInfo(
+      r.firstSeen, r.lastSeen,
+      r.scheduleStartTime ?? null, r.scheduleEndTime ?? null,
+    );
+    return {
+      ...r,
+      scheduleStatus:  si.scheduleStatus,
+      minutesLate:     si.minutesLate,
+      scheduleStart:   si.scheduleStart,
+      scheduleEnd:     si.scheduleEnd,
+      earlyDeparture:  si.earlyDeparture,
+      minutesEarly:    si.minutesEarly,
+    };
   });
 
   res.json(ListAttendanceResponse.parse(result));
@@ -161,6 +212,7 @@ router.get("/attendance/today", async (_req, res): Promise<void> => {
       zoneName: zonesTable.name,
       totalMinutes: attendanceTable.totalMinutes,
       scheduleStartTime: departmentWorkSchedulesTable.startTime,
+      scheduleEndTime:   departmentWorkSchedulesTable.endTime,
     })
     .from(attendanceTable)
     .leftJoin(employeesTable, eq(employeesTable.id, attendanceTable.employeeId))
@@ -229,8 +281,8 @@ router.get("/attendance/today", async (_req, res): Promise<void> => {
   const absentCount = Math.max(0, totalEmployees - presentCount);
 
   const recordsWithSchedule = records.map((r) => {
-    const { scheduleStatus, minutesLate, scheduleStart } = computeScheduleInfo(r.firstSeen, r.scheduleStartTime ?? null);
-    return { ...r, scheduleStatus, minutesLate, scheduleStart };
+    const si = computeScheduleInfo(r.firstSeen, r.lastSeen, r.scheduleStartTime ?? null, r.scheduleEndTime ?? null);
+    return { ...r, ...si };
   });
 
   res.json(GetTodayAttendanceResponse.parse({
@@ -292,6 +344,7 @@ router.get("/attendance/report", async (req, res): Promise<void> => {
       totalMinutes: attendanceTable.totalMinutes,
       zoneName: zonesTable.name,
       scheduleStartTime: departmentWorkSchedulesTable.startTime,
+      scheduleEndTime:   departmentWorkSchedulesTable.endTime,
     })
     .from(attendanceTable)
     .leftJoin(employeesTable, eq(employeesTable.id, attendanceTable.employeeId))
@@ -346,8 +399,8 @@ router.get("/attendance/report", async (req, res): Promise<void> => {
       : undefined;
 
     const schedInfo = isSingleDay && dayRec
-      ? computeScheduleInfo(dayRec.firstSeen, dayRec.scheduleStartTime ?? null)
-      : { scheduleStatus: null, minutesLate: null, scheduleStart: null };
+      ? computeScheduleInfo(dayRec.firstSeen, dayRec.lastSeen, dayRec.scheduleStartTime ?? null, dayRec.scheduleEndTime ?? null)
+      : { scheduleStatus: null, minutesLate: null, scheduleStart: null, scheduleEnd: null, earlyDeparture: null, minutesEarly: null };
 
     return {
       employeeId:       emp.id,

@@ -12,6 +12,7 @@ import leavesRouter from "./leaves";
 import zoneSchedulesRouter from "./zone_schedules";
 import departmentsRouter from "./departments";
 import departmentSchedulesRouter from "./department_schedules";
+import form76Router from "./form76";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(leavesRouter);
 router.use(zoneSchedulesRouter);
 router.use(departmentsRouter);
 router.use(departmentSchedulesRouter);
+router.use(form76Router);
 
 export default router;
