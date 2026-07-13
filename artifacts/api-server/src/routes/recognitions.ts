@@ -69,6 +69,7 @@ router.post("/recognitions", async (req, res): Promise<void> => {
   let status = parsed.data.status;
   let employeeId = parsed.data.employeeId ?? null;
   let confidence = parsed.data.confidence;
+  let faceDetected = false;
 
   // Internal AI fallback: only runs when the camera itself failed to recognize the
   // person (status "unknown") and a snapshot was supplied. If the camera already
@@ -81,6 +82,8 @@ router.post("/recognitions", async (req, res): Promise<void> => {
       const descriptor = await computeFaceDescriptor(buffer);
 
       if (descriptor) {
+        faceDetected = true;
+
         const photos = await db
           .select({ employeeId: employeePhotosTable.employeeId, faceDescriptor: employeePhotosTable.faceDescriptor })
           .from(employeePhotosTable)
@@ -96,19 +99,37 @@ router.post("/recognitions", async (req, res): Promise<void> => {
           employeeId = match.employeeId;
           confidence = match.confidence / 100;
           req.log.info({ employeeId, distance: match.distance }, "Internal AI fallback matched a face");
+        } else {
+          // Face detected but not matched against any enrolled employee
+          status = "unknown";
+          confidence = 0;
+          req.log.info("Internal AI fallback: face detected but no match found");
         }
       }
     } catch (err) {
       req.log.warn({ err }, "Internal AI fallback matching failed");
     }
+
+    // If the camera worker sent a frame and no face was detected at all, skip
+    // recording the event — it is just an empty frame (no person in view).
+    if (!faceDetected) {
+      res.status(204).end();
+      return;
+    }
   }
+
+  // Persist snapshot: prefer an explicit URL, fall back to the inline base64 data
+  // (only when a face was actually present — avoids storing empty frames in the DB).
+  const snapshotUrl =
+    parsed.data.snapshotUrl ??
+    (faceDetected && parsed.data.snapshotBase64 ? parsed.data.snapshotBase64 : null);
 
   const [event] = await db.insert(recognitionEventsTable).values({
     cameraId: parsed.data.cameraId,
     employeeId,
     status,
     confidence,
-    snapshotUrl: parsed.data.snapshotUrl ?? null,
+    snapshotUrl,
     detectedAt: new Date(parsed.data.detectedAt),
   }).returning();
 
