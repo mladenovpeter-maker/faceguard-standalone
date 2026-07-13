@@ -48,6 +48,7 @@ export default function EmployeeDetail() {
   const { data: cameras = [] } = useListCameras();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const MAX_PHOTOS = 5;
+  const [reprocessing, setReprocessing] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [capturingId, setCapturingId] = useState<number | null>(null);
   const [capturePreview, setCapturePreview] = useState<string | null>(null);
@@ -85,6 +86,24 @@ export default function EmployeeDetail() {
       },
       onError: (err: any) => toast({ title: "Грешка при запазване", description: err.message, variant: "destructive" }),
     });
+  }
+
+  async function handleReprocess() {
+    setReprocessing(true);
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${base}/api/employees/${employeeId}/photos/reprocess`, { method: "POST" });
+      const data = await res.json();
+      toast({
+        title: `Преобработка завършена`,
+        description: `${data.found} от ${data.total} снимки с открито лице.`,
+      });
+      queryClient.invalidateQueries({ queryKey: getListEmployeePhotosQueryKey(employeeId) });
+    } catch (e: any) {
+      toast({ title: "Грешка при преобработка", description: e.message, variant: "destructive" });
+    } finally {
+      setReprocessing(false);
+    }
   }
 
   function handleAddPhotoClick() {
@@ -321,7 +340,19 @@ export default function EmployeeDetail() {
                 className="hidden"
                 onChange={handlePhotoFileChange}
               />
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                {photos.some(p => !p.hasFaceDescriptor) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReprocess}
+                    disabled={reprocessing}
+                    className="text-amber-500 border-amber-500/40 hover:bg-amber-500/10"
+                  >
+                    <ScanFace className="h-4 w-4 mr-2" />
+                    {reprocessing ? "Обработва..." : "Преобработи"}
+                  </Button>
+                )}
                 {cameras.length > 0 && (
                   <Button
                     variant="outline"
