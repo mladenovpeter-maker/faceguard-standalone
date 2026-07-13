@@ -64,5 +64,12 @@ services:
     ports:
       - "8081:80"
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - face-guard
+
 volumes:
   faceguard-db-data:
