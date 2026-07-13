@@ -36,7 +36,7 @@ function setStoredToken(token: string | null): void {
 // attach `Authorization: Bearer <token>` when this getter returns a token.
 setAuthTokenGetter(getStoredToken);
 
-async function apiFetch(path: string, opts?: RequestInit) {
+export async function apiFetch(path: string, opts?: RequestInit) {
   const token = getStoredToken();
   const res = await fetch(`${BASE}${path}`, {
     headers: {
