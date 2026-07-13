@@ -784,7 +784,12 @@ export const ListZoneSchedulesResponseItem = zod.object({
   "zoneName": zod.string().nullish(),
   "dayOfWeek": zod.number().min(1).max(listZoneSchedulesResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
   "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM'),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
   "endTime": zod.string().describe('HH:MM')
+}))
 })
 export const ListZoneSchedulesResponse = zod.array(ListZoneSchedulesResponseItem)
 
@@ -800,7 +805,12 @@ export const UpsertZoneScheduleBody = zod.object({
   "zoneId": zod.number(),
   "dayOfWeek": zod.number().min(1).max(upsertZoneScheduleBodyDayOfWeekMax),
   "startTime": zod.string(),
-  "endTime": zod.string()
+  "endTime": zod.string(),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM')
+})).optional()
 })
 
 export const upsertZoneScheduleResponseDayOfWeekMax = 7;
@@ -813,7 +823,12 @@ export const UpsertZoneScheduleResponse = zod.object({
   "zoneName": zod.string().nullish(),
   "dayOfWeek": zod.number().min(1).max(upsertZoneScheduleResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
   "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM'),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
   "endTime": zod.string().describe('HH:MM')
+}))
 })
 
 
@@ -906,7 +921,12 @@ export const ListDepartmentSchedulesResponseItem = zod.object({
   "departmentName": zod.string().nullish(),
   "dayOfWeek": zod.number().min(1).max(listDepartmentSchedulesResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
   "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM'),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
   "endTime": zod.string().describe('HH:MM')
+}))
 })
 export const ListDepartmentSchedulesResponse = zod.array(ListDepartmentSchedulesResponseItem)
 
@@ -922,7 +942,12 @@ export const UpsertDepartmentScheduleBody = zod.object({
   "departmentId": zod.number(),
   "dayOfWeek": zod.number().min(1).max(upsertDepartmentScheduleBodyDayOfWeekMax),
   "startTime": zod.string(),
-  "endTime": zod.string()
+  "endTime": zod.string(),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM')
+})).optional()
 })
 
 export const upsertDepartmentScheduleResponseDayOfWeekMax = 7;
@@ -935,7 +960,12 @@ export const UpsertDepartmentScheduleResponse = zod.object({
   "departmentName": zod.string().nullish(),
   "dayOfWeek": zod.number().min(1).max(upsertDepartmentScheduleResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
   "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM'),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
   "endTime": zod.string().describe('HH:MM')
+}))
 })
 
 
