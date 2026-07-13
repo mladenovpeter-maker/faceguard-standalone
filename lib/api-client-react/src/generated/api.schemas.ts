@@ -103,6 +103,15 @@ export interface DepartmentInput {
   name: string;
 }
 
+export interface ScheduleBreak {
+  /** e.g. Обедна почивка */
+  name: string;
+  /** HH:MM */
+  startTime: string;
+  /** HH:MM */
+  endTime: string;
+}
+
 export interface DepartmentWorkSchedule {
   id: number;
   departmentId: number;
@@ -118,6 +127,7 @@ export interface DepartmentWorkSchedule {
   startTime: string;
   /** HH:MM */
   endTime: string;
+  breaks: ScheduleBreak[];
 }
 
 export interface DepartmentWorkScheduleInput {
@@ -129,6 +139,7 @@ export interface DepartmentWorkScheduleInput {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  breaks?: ScheduleBreak[];
 }
 
 export interface PhotoUpload {
@@ -274,6 +285,11 @@ export interface CameraTestResult {
   message: string;
   /** @nullable */
   latencyMs?: number | null;
+  /**
+     * Base64-encoded JPEG snapshot from the camera (data:image/jpeg;base64,...)
+     * @nullable
+     */
+  snapshotBase64?: string | null;
 }
 
 export type ZoneAccessLevel = typeof ZoneAccessLevel[keyof typeof ZoneAccessLevel];
@@ -588,6 +604,7 @@ export interface ZoneWorkSchedule {
   startTime: string;
   /** HH:MM */
   endTime: string;
+  breaks: ScheduleBreak[];
 }
 
 export interface ZoneWorkScheduleInput {
@@ -599,6 +616,7 @@ export interface ZoneWorkScheduleInput {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  breaks?: ScheduleBreak[];
 }
 
 export interface DashboardSummary {
