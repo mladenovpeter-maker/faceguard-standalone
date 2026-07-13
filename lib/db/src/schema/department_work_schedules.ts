@@ -1,7 +1,15 @@
-import { pgTable, serial, integer, text, timestamp, unique } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp, unique, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { departmentsTable } from "./departments";
+
+export const scheduleBreakSchema = z.object({
+  name: z.string(),
+  startTime: z.string(), // "HH:MM"
+  endTime: z.string(),   // "HH:MM"
+});
+
+export type ScheduleBreak = z.infer<typeof scheduleBreakSchema>;
 
 export const departmentWorkSchedulesTable = pgTable("department_work_schedules", {
   id: serial("id").primaryKey(),
@@ -9,12 +17,15 @@ export const departmentWorkSchedulesTable = pgTable("department_work_schedules",
   dayOfWeek: integer("day_of_week").notNull(), // 1=Monday … 7=Sunday (ISO)
   startTime: text("start_time").notNull(),     // "08:00"
   endTime: text("end_time").notNull(),          // "17:00"
+  breaks: json("breaks").$type<ScheduleBreak[]>().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [unique().on(t.departmentId, t.dayOfWeek)]);
 
 export const insertDepartmentWorkScheduleSchema = createInsertSchema(departmentWorkSchedulesTable).omit({
   id: true,
   createdAt: true,
+}).extend({
+  breaks: z.array(scheduleBreakSchema).optional().default([]),
 });
 export type InsertDepartmentWorkSchedule = z.infer<typeof insertDepartmentWorkScheduleSchema>;
 export type DepartmentWorkSchedule = typeof departmentWorkSchedulesTable.$inferSelect;
