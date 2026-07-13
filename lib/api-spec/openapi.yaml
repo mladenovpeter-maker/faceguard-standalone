@@ -1448,6 +1448,13 @@ components:
           type: ["string", "null"]
         leaveReason:
           type: ["string", "null"]
+        scheduleStatus:
+          type: ["string", "null"]
+          enum: ["on_time", "late", "no_schedule", null]
+        minutesLate:
+          type: ["integer", "null"]
+        scheduleStart:
+          type: ["string", "null"]
 
     AttendanceReport:
       type: object
@@ -1497,6 +1504,13 @@ components:
           type: ["string", "null"]
         totalMinutes:
           type: ["integer", "null"]
+        scheduleStatus:
+          type: ["string", "null"]
+          enum: ["on_time", "late", "no_schedule", null]
+        minutesLate:
+          type: ["integer", "null"]
+        scheduleStart:
+          type: ["string", "null"]
 
     TodayAttendance:
       type: object
