@@ -14,6 +14,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* ./
 COPY lib ./lib
 COPY artifacts/api-server ./artifacts/api-server
 COPY scripts ./scripts
+COPY lib/db/drizzle ./lib/db/drizzle
 
 RUN pnpm install --frozen-lockfile || pnpm install
 RUN pnpm --filter @workspace/db... run build --if-present
@@ -33,6 +34,7 @@ WORKDIR /app
 COPY --from=build /deploy/api-server/node_modules ./node_modules
 COPY --from=build /repo/artifacts/api-server/dist ./dist
 COPY --from=build /repo/artifacts/api-server/models ./models
+COPY --from=build /repo/lib/db/drizzle ./drizzle
 
 ENV NODE_ENV=production
 EXPOSE 8080
