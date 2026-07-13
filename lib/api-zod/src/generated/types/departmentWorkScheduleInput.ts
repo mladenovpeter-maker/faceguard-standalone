@@ -5,6 +5,7 @@
  * FaceGuard - Face Recognition Access & Attendance System
  * OpenAPI spec version: 0.1.0
  */
+import type { ScheduleBreak } from './scheduleBreak';
 
 export interface DepartmentWorkScheduleInput {
   departmentId: number;
@@ -15,4 +16,5 @@ export interface DepartmentWorkScheduleInput {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  breaks?: ScheduleBreak[];
 }
