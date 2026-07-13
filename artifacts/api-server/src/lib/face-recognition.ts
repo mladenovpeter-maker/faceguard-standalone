@@ -83,10 +83,11 @@ export async function computeFaceDescriptor(imageBuffer: Buffer): Promise<number
   const ctx = canvas.getContext("2d");
   ctx.drawImage(image, 0, 0);
 
-  // --- Primary: SsdMobilenetv1 at permissive threshold ---
-  // Frames are pre-scaled to 640px by the camera worker, so one pass is sufficient.
+  // --- Primary: SsdMobilenetv1 ---
+  // 0.5 is the standard recommended threshold — avoids false-positives on car
+  // headlights / grilles that trigger at very low confidence values.
   const ssdDetection = await faceapi
-    .detectSingleFace(canvas as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.1 }))
+    .detectSingleFace(canvas as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
     .withFaceLandmarks()
     .withFaceDescriptor();
 
@@ -95,12 +96,12 @@ export async function computeFaceDescriptor(imageBuffer: Buffer): Promise<number
     return Array.from(ssdDetection.descriptor);
   }
 
-  // --- Secondary: TinyFaceDetector at 3 representative sizes ---
+  // --- Secondary: TinyFaceDetector (higher score threshold to avoid false positives) ---
   for (const inputSize of [224, 320, 416]) {
     const detection = await faceapi
       .detectSingleFace(
         canvas as unknown as faceapi.TNetInput,
-        new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.1 }),
+        new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.4 }),
       )
       .withFaceLandmarks()
       .withFaceDescriptor();
