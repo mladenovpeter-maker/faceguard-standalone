@@ -8,6 +8,13 @@
       "when": 1783928607764,
       "tag": "0000_brave_black_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783956000000,
+      "tag": "0001_add_breaks_column",
+      "breakpoints": true
     }
   ]
 }
