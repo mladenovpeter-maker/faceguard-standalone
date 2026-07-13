@@ -103,15 +103,6 @@ export interface DepartmentInput {
   name: string;
 }
 
-export interface ScheduleBreak {
-  /** e.g. Обедна почивка */
-  name: string;
-  /** HH:MM */
-  startTime: string;
-  /** HH:MM */
-  endTime: string;
-}
-
 export interface DepartmentWorkSchedule {
   id: number;
   departmentId: number;
@@ -127,7 +118,6 @@ export interface DepartmentWorkSchedule {
   startTime: string;
   /** HH:MM */
   endTime: string;
-  breaks: ScheduleBreak[];
 }
 
 export interface DepartmentWorkScheduleInput {
@@ -139,7 +129,6 @@ export interface DepartmentWorkScheduleInput {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
-  breaks?: ScheduleBreak[];
 }
 
 export interface PhotoUpload {
@@ -285,11 +274,12 @@ export interface CameraTestResult {
   message: string;
   /** @nullable */
   latencyMs?: number | null;
-  /**
-     * Base64-encoded JPEG snapshot from the camera (data:image/jpeg;base64,...)
-     * @nullable
-     */
+  /** @nullable */
   snapshotBase64?: string | null;
+}
+
+export interface CameraCaptureResult {
+  snapshotBase64: string;
 }
 
 export type ZoneAccessLevel = typeof ZoneAccessLevel[keyof typeof ZoneAccessLevel];
@@ -420,18 +410,6 @@ export interface RecognitionInput {
   detectedAt: string;
 }
 
-/**
- * @nullable
- */
-export type AttendanceReportRowScheduleStatus = typeof AttendanceReportRowScheduleStatus[keyof typeof AttendanceReportRowScheduleStatus] | null;
-
-
-export const AttendanceReportRowScheduleStatus = {
-  on_time: 'on_time',
-  late: 'late',
-  no_schedule: 'no_schedule',
-} as const;
-
 export interface AttendanceReportRow {
   employeeId: number;
   employeeName: string;
@@ -458,12 +436,6 @@ export interface AttendanceReportRow {
   leaveType?: string | null;
   /** @nullable */
   leaveReason?: string | null;
-  /** @nullable */
-  scheduleStatus?: AttendanceReportRowScheduleStatus;
-  /** @nullable */
-  minutesLate?: number | null;
-  /** @nullable */
-  scheduleStart?: string | null;
 }
 
 export interface AttendanceReport {
@@ -474,18 +446,6 @@ export interface AttendanceReport {
   rows: AttendanceReportRow[];
 }
 
-/**
- * @nullable
- */
-export type AttendanceRecordScheduleStatus = typeof AttendanceRecordScheduleStatus[keyof typeof AttendanceRecordScheduleStatus] | null;
-
-
-export const AttendanceRecordScheduleStatus = {
-  on_time: 'on_time',
-  late: 'late',
-  no_schedule: 'no_schedule',
-} as const;
-
 export interface AttendanceRecord {
   id: number;
   employeeId: number;
@@ -495,6 +455,8 @@ export interface AttendanceRecord {
   employeeNumber?: string | null;
   /** @nullable */
   employeePhotoUrl?: string | null;
+  /** @nullable */
+  departmentName?: string | null;
   date: string;
   firstSeen: string;
   lastSeen: string;
@@ -505,11 +467,17 @@ export interface AttendanceRecord {
   /** @nullable */
   totalMinutes?: number | null;
   /** @nullable */
-  scheduleStatus?: AttendanceRecordScheduleStatus;
+  scheduleStatus?: string | null;
   /** @nullable */
   minutesLate?: number | null;
   /** @nullable */
   scheduleStart?: string | null;
+  /** @nullable */
+  scheduleEnd?: string | null;
+  /** @nullable */
+  earlyDeparture?: boolean | null;
+  /** @nullable */
+  minutesEarly?: number | null;
 }
 
 /**
@@ -640,7 +608,6 @@ export interface ZoneWorkSchedule {
   startTime: string;
   /** HH:MM */
   endTime: string;
-  breaks: ScheduleBreak[];
 }
 
 export interface ZoneWorkScheduleInput {
@@ -652,7 +619,6 @@ export interface ZoneWorkScheduleInput {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
-  breaks?: ScheduleBreak[];
 }
 
 export interface DashboardSummary {
@@ -746,6 +712,8 @@ export const ListRecognitionsStatus = {
 
 export type ListAttendanceParams = {
 date?: string;
+from?: string;
+to?: string;
 /**
  * @nullable
  */
@@ -754,7 +722,61 @@ employeeId?: number | null;
  * @nullable
  */
 zoneId?: number | null;
+/**
+ * @nullable
+ */
+departmentId?: number | null;
 };
+
+export type GetAttendanceForm76Params = {
+year: number;
+month: number;
+/**
+ * @nullable
+ */
+departmentId?: number | null;
+/**
+ * @nullable
+ */
+employeeId?: number | null;
+};
+
+export interface Form76Day {
+  day: number;
+  code: string;
+  /** @nullable */
+  hours?: number | null;
+  isReview: boolean;
+}
+
+export interface Form76Row {
+  employeeId: number;
+  employeeName: string;
+  employeeNumber: string;
+  /** @nullable */
+  employeePhotoUrl?: string | null;
+  departmentName: string;
+  days: Form76Day[];
+  totalDaysWorked: number;
+  totalHours: number;
+  normHours: number;
+  overtime: number;
+  nightHours: number;
+}
+
+export interface Form76Response {
+  year: number;
+  month: number;
+  daysInMonth: number;
+  workingDays: number;
+  normHours: number;
+  totalEmployees: number;
+  totalHours: number;
+  totalOvertime: number;
+  totalNightHours: number;
+  reviewDays: number;
+  rows: Form76Row[];
+}
 
 export type GetAttendanceReportParams = {
 from: string;

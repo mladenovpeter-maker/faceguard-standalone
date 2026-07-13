@@ -27,6 +27,7 @@ import type {
   Camera,
   CameraInput,
   CameraTestResult,
+  CameraCaptureResult,
   CameraUpdate,
   DashboardSummary,
   Department,
@@ -39,6 +40,8 @@ import type {
   EmployeePresence,
   EmployeeUpdate,
   GetAttendanceReportParams,
+  GetAttendanceForm76Params,
+  Form76Response,
   HealthStatus,
   HourlyActivity,
   LeaveInput,
@@ -1262,6 +1265,75 @@ export const useTestCameraConnection = <TError = ErrorType<unknown>,
       return useMutation(getTestCameraConnectionMutationOptions(options));
     }
 
+export const getCaptureCameraFrameUrl = (id: number,) => {
+
+
+
+
+  return `/api/cameras/${id}/capture`
+}
+
+/**
+ * @summary Capture a still frame from a camera (used for employee photo enrollment)
+ */
+export const captureCameraFrame = async (id: number, options?: RequestInit): Promise<CameraCaptureResult> => {
+
+  return customFetch<CameraCaptureResult>(getCaptureCameraFrameUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCaptureCameraFrameMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof captureCameraFrame>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof captureCameraFrame>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['captureCameraFrame'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof captureCameraFrame>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  captureCameraFrame(id,requestOptions)
+        }
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CaptureCameraFrameMutationResult = NonNullable<Awaited<ReturnType<typeof captureCameraFrame>>>
+
+    export type CaptureCameraFrameMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Capture a still frame from a camera (used for employee photo enrollment)
+ */
+export const useCaptureCameraFrame = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof captureCameraFrame>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof captureCameraFrame>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getCaptureCameraFrameMutationOptions(options));
+    }
+
 export const getListZonesUrl = () => {
 
 
@@ -2154,6 +2226,69 @@ export function useGetAttendanceReport<TData = Awaited<ReturnType<typeof getAtte
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAttendanceReportQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetAttendanceForm76Url = (params: GetAttendanceForm76Params,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/attendance/form76?${stringifiedParams}` : `/api/attendance/form76`
+}
+
+/**
+ * @summary Monthly Form 76 attendance grid
+ */
+export const getAttendanceForm76 = async (params: GetAttendanceForm76Params, options?: RequestInit): Promise<Form76Response> => {
+
+  return customFetch<Form76Response>(getGetAttendanceForm76Url(params),
+  {
+    ...options,
+    method: 'GET'
+  }
+);}
+
+export const getGetAttendanceForm76QueryKey = (params?: GetAttendanceForm76Params,) => {
+    return [
+    `/api/attendance/form76`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getGetAttendanceForm76QueryOptions = <TData = Awaited<ReturnType<typeof getAttendanceForm76>>, TError = ErrorType<unknown>>(params: GetAttendanceForm76Params, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttendanceForm76>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAttendanceForm76QueryKey(params);
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAttendanceForm76>>> = ({ signal }) => getAttendanceForm76(params, { signal, ...requestOptions });
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAttendanceForm76>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAttendanceForm76QueryResult = NonNullable<Awaited<ReturnType<typeof getAttendanceForm76>>>
+export type GetAttendanceForm76QueryError = ErrorType<unknown>
+
+/**
+ * @summary Monthly Form 76 attendance grid
+ */
+
+export function useGetAttendanceForm76<TData = Awaited<ReturnType<typeof getAttendanceForm76>>, TError = ErrorType<unknown>>(
+ params: GetAttendanceForm76Params, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttendanceForm76>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAttendanceForm76QueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
