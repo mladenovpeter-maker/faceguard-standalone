@@ -11,4 +11,9 @@ export interface CameraTestResult {
   message: string;
   /** @nullable */
   latencyMs?: number | null;
+  /**
+     * Base64-encoded JPEG snapshot from the camera (data:image/jpeg;base64,...)
+     * @nullable
+     */
+  snapshotBase64?: string | null;
 }
