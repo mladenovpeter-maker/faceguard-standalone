@@ -330,6 +330,47 @@ router.post("/employees/:id/photos", async (req, res): Promise<void> => {
   );
 });
 
+// Re-run face descriptor computation for all photos of an employee that have no descriptor.
+router.post("/employees/:id/photos/reprocess", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const photos = await db
+    .select()
+    .from(employeePhotosTable)
+    .where(eq(employeePhotosTable.employeeId, id));
+
+  let updated = 0;
+  let found = 0;
+
+  for (const photo of photos) {
+    // Re-process photos without a descriptor, or force=true re-processes all
+    const photoFilename = photo.photoUrl.split("/").pop()!;
+    const filePath = path.join(photosDir, photoFilename);
+    if (!fs.existsSync(filePath)) continue;
+
+    const buffer = fs.readFileSync(filePath);
+    let descriptor: number[] | null = null;
+    try {
+      descriptor = await computeFaceDescriptor(buffer);
+    } catch (err) {
+      req.log.warn({ err, photoId: photo.id }, "Reprocess: face descriptor failed");
+    }
+
+    if (descriptor !== null) {
+      await db
+        .update(employeePhotosTable)
+        .set({ faceDescriptor: descriptor })
+        .where(eq(employeePhotosTable.id, photo.id));
+      found++;
+    }
+    updated++;
+  }
+
+  req.log.info({ employeeId: id, total: updated, found }, "Photos reprocessed");
+  res.json({ total: updated, found });
+});
+
 router.delete("/employees/:id/photos/:photoId", async (req, res): Promise<void> => {
   const params = DeleteEmployeePhotoParams.safeParse(req.params);
   if (!params.success) {
