@@ -1,6 +1,6 @@
-import { useGetEmployee, useUpdateEmployee, useDeleteEmployee, useListRecognitions, useListDepartments, getListEmployeesQueryKey, useListEmployeePhotos, useAddEmployeePhoto, useDeleteEmployeePhoto, getListEmployeePhotosQueryKey } from "@workspace/api-client-react";
+import { useGetEmployee, useUpdateEmployee, useDeleteEmployee, useListRecognitions, useListDepartments, getListEmployeesQueryKey, useListEmployeePhotos, useAddEmployeePhoto, useDeleteEmployeePhoto, getListEmployeePhotosQueryKey, useListCameras, useTestCameraConnection } from "@workspace/api-client-react";
 import { useParams, useLocation } from "wouter";
-import { ArrowLeft, User, Phone, Mail, Building, Briefcase, Calendar, Pencil, Trash2, ScanFace, Plus, X, ShieldCheck, ShieldAlert } from "lucide-react";
+import { ArrowLeft, User, Phone, Mail, Building, Briefcase, Calendar, Pencil, Trash2, ScanFace, Plus, X, ShieldCheck, ShieldAlert, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,8 +44,48 @@ export default function EmployeeDetail() {
   const deleteEmployee = useDeleteEmployee();
   const addPhoto = useAddEmployeePhoto();
   const deletePhoto = useDeleteEmployeePhoto();
+  const testCamera = useTestCameraConnection();
+  const { data: cameras = [] } = useListCameras();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const MAX_PHOTOS = 5;
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [capturingId, setCapturingId] = useState<number | null>(null);
+  const [capturePreview, setCapturePreview] = useState<string | null>(null);
+
+  function handleCaptureFromCamera(cameraId: number) {
+    setCapturingId(cameraId);
+    setCapturePreview(null);
+    testCamera.mutate({ id: cameraId }, {
+      onSuccess: (result) => {
+        if (result.snapshotBase64) {
+          setCapturePreview(result.snapshotBase64);
+        } else {
+          toast({ title: "Камерата не е достъпна", variant: "destructive" });
+        }
+      },
+      onError: (err: any) => toast({ title: "Грешка при снимане", description: err.message, variant: "destructive" }),
+      onSettled: () => setCapturingId(null),
+    });
+  }
+
+  function handleUseCapturedPhoto() {
+    if (!capturePreview) return;
+    const photoBase64 = capturePreview.split(',')[1];
+    addPhoto.mutate({ id: employeeId, data: { photoBase64 } }, {
+      onSuccess: (photo) => {
+        toast({
+          title: "Снимката е добавена",
+          description: photo.hasFaceDescriptor
+            ? "Лицето е разпознато и запазено."
+            : "Не бе открито лице — снимката е запазена без AI профил.",
+        });
+        queryClient.invalidateQueries({ queryKey: getListEmployeePhotosQueryKey(employeeId) });
+        setCaptureOpen(false);
+        setCapturePreview(null);
+      },
+      onError: (err: any) => toast({ title: "Грешка при запазване", description: err.message, variant: "destructive" }),
+    });
+  }
 
   function handleAddPhotoClick() {
     photoInputRef.current?.click();
@@ -255,7 +295,7 @@ export default function EmployeeDetail() {
 
         <div className="col-span-1 md:col-span-2 space-y-6">
           <Card className="border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-2">
               <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <ScanFace className="h-4 w-4" /> Снимки за разпознаване ({photos.length}/{MAX_PHOTOS})
               </CardTitle>
@@ -266,16 +306,70 @@ export default function EmployeeDetail() {
                 className="hidden"
                 onChange={handlePhotoFileChange}
               />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAddPhotoClick}
-                disabled={photos.length >= MAX_PHOTOS || addPhoto.isPending}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {addPhoto.isPending ? "Качване..." : "Добави снимка"}
-              </Button>
+              <div className="flex gap-2">
+                {cameras.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setCapturePreview(null); setCaptureOpen(true); }}
+                    disabled={photos.length >= MAX_PHOTOS}
+                  >
+                    <Camera className="h-4 w-4 mr-2" /> Снимай от камера
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddPhotoClick}
+                  disabled={photos.length >= MAX_PHOTOS || addPhoto.isPending}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {addPhoto.isPending ? "Качване..." : "Добави снимка"}
+                </Button>
+              </div>
             </CardHeader>
+
+            {/* Camera capture dialog */}
+            <Dialog open={captureOpen} onOpenChange={(o) => { if (!o) { setCaptureOpen(false); setCapturePreview(null); } }}>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Снимай от камера</DialogTitle>
+                </DialogHeader>
+                {!capturePreview ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">Избери камера за заснемане на служителя:</p>
+                    <div className="grid gap-2">
+                      {cameras.map(cam => (
+                        <Button
+                          key={cam.id}
+                          variant="outline"
+                          className="justify-start"
+                          disabled={capturingId === cam.id}
+                          onClick={() => handleCaptureFromCamera(cam.id)}
+                        >
+                          <Camera className="h-4 w-4 mr-2 text-muted-foreground" />
+                          {cam.name}
+                          <span className="ml-auto font-mono text-xs text-muted-foreground">{cam.host}</span>
+                          {capturingId === cam.id && <span className="ml-2 text-xs">Снима...</span>}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded-lg overflow-hidden border border-border">
+                      <img src={capturePreview} alt="Снимка от камера" className="w-full object-contain max-h-72" />
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" onClick={() => setCapturePreview(null)}>Снимай отново</Button>
+                      <Button onClick={handleUseCapturedPhoto} disabled={addPhoto.isPending}>
+                        {addPhoto.isPending ? "Запазване..." : "Използвай снимката"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
             <CardContent>
               <p className="text-xs text-muted-foreground mb-4">
                 Добавете 2–5 снимки от различни ъгли, за да подобрите точността на разпознаване. Тези снимки се използват само като резервен вариант, когато камерата не успее да разпознае лицето.
