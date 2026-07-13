@@ -1,4 +1,4 @@
-import { useListCameras, useUpdateCamera, useDeleteCamera, getListCamerasQueryKey, useListZones } from "@workspace/api-client-react";
+import { useListCameras, useUpdateCamera, useDeleteCamera, useTestCameraConnection, getListCamerasQueryKey, useListZones } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Plus, Video, Network, Pencil, Trash2 } from "lucide-react";
@@ -148,8 +148,22 @@ export default function CameraList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editCamera, setEditCamera] = useState<CameraRow | null>(null);
+  const [testingId, setTestingId] = useState<number | null>(null);
+  const testCamera = useTestCameraConnection();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListCamerasQueryKey() });
+
+  function handleTest(id: number) {
+    setTestingId(id);
+    testCamera.mutate({ id }, {
+      onSuccess: (result) => {
+        toast({ title: "Връзката е успешна", description: result.message });
+        invalidate();
+      },
+      onError: (err: any) => toast({ title: "Грешка при тест", description: err.message, variant: "destructive" }),
+      onSettled: () => setTestingId(null),
+    });
+  }
 
   function handleEdit(values: CameraFormValues) {
     if (!editCamera) return;
@@ -225,8 +239,14 @@ export default function CameraList() {
                   <TableCell><StatusBadge status={camera.status} /></TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="outline" size="sm" className="font-mono text-xs h-7 mr-1">
-                        <Network className="h-3 w-3 mr-1" /> ТЕСТ
+                      <Button
+                        variant="outline" size="sm"
+                        className="font-mono text-xs h-7 mr-1"
+                        disabled={testingId === camera.id}
+                        onClick={() => handleTest(camera.id)}
+                      >
+                        <Network className="h-3 w-3 mr-1" />
+                        {testingId === camera.id ? "..." : "ТЕСТ"}
                       </Button>
                       <Button
                         variant="ghost" size="icon"
