@@ -92,11 +92,23 @@ export default function EmployeeDetail() {
     setReprocessing(true);
     try {
       const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const res = await fetch(`${base}/api/employees/${employeeId}/photos/reprocess`, { method: "POST" });
+      const res = await fetch(`${base}/api/employees/${employeeId}/photos/reprocess`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? `HTTP ${res.status}`);
+      }
       const data = await res.json();
+      const found = data.found ?? 0;
+      const total = data.total ?? 0;
       toast({
-        title: `Преобработка завършена`,
-        description: `${data.found} от ${data.total} снимки с открито лице.`,
+        title: found > 0 ? `Лице открито в ${found} от ${total} снимки` : `Не е открито лице`,
+        description: found > 0
+          ? `Разпознаването е активирано за ${found} снимки.`
+          : `SSD моделът не засече лице. Опитайте с нови снимки при добра светлина.`,
+        variant: found > 0 ? "default" : "destructive",
       });
       queryClient.invalidateQueries({ queryKey: getListEmployeePhotosQueryKey(employeeId) });
     } catch (e: any) {
