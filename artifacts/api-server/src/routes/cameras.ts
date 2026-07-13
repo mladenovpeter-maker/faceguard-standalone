@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, camerasTable, zonesTable, recognitionEventsTable } from "@workspace/db";
+import { captureFrame, toSnapshotDataUrl } from "../lib/capture-frame";
 import {
   CreateCameraBody,
   GetCameraParams,
@@ -172,17 +173,23 @@ router.post("/cameras/:id/test", async (req, res): Promise<void> => {
   }
 
   const start = Date.now();
-  // Simulate a connectivity check — real implementation would attempt RTSP/HTTP probe
-  const host = camera.host;
-  const latencyMs = Math.floor(Math.random() * 80) + 20;
+  const frame = await captureFrame(camera);
+  const latencyMs = Date.now() - start;
 
-  // Mark camera online after test
-  await db.update(camerasTable).set({ status: "online" }).where(eq(camerasTable.id, params.data.id));
+  const success = frame !== null;
+  const snapshotBase64 = frame ? toSnapshotDataUrl(frame) : null;
+
+  await db.update(camerasTable)
+    .set({ status: success ? "online" : "offline" })
+    .where(eq(camerasTable.id, params.data.id));
 
   res.json(TestCameraConnectionResponse.parse({
-    success: true,
-    message: `Successfully connected to ${camera.brand.toUpperCase()} camera at ${host}`,
+    success,
+    message: success
+      ? `Успешна връзка с ${camera.brand.toUpperCase()} камера на ${camera.host} (${latencyMs}ms)`
+      : `Неуспешна връзка с камера на ${camera.host}`,
     latencyMs,
+    snapshotBase64,
   }));
 });
 
