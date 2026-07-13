@@ -22,6 +22,7 @@ import RecognitionList from "@/pages/recognitions/index";
 import AttendanceList from "@/pages/attendance/index";
 import Form76Page from "@/pages/form76/index";
 import LeavesPage from "@/pages/leaves/index";
+import VisitorsPage from "@/pages/visitors/index";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +65,7 @@ function AppRoutes() {
         <Route path="/attendance" component={AttendanceList} />
         <Route path="/form76" component={Form76Page} />
         <Route path="/leaves" component={LeavesPage} />
+        <Route path="/visitors" component={VisitorsPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

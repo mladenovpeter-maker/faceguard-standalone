@@ -829,3 +829,98 @@ export type ListDepartmentSchedulesParams = {
 departmentId?: number | null;
 };
 
+  export type VisitorType = typeof VisitorType[keyof typeof VisitorType];
+
+  export const VisitorType = {
+    supplier: 'supplier',
+    carrier: 'carrier',
+    client: 'client',
+    guest: 'guest',
+    other: 'other',
+  } as const;
+
+  export interface Visitor {
+    id: number;
+    name: string;
+    /** @nullable */
+    company?: string | null;
+    type: VisitorType;
+    /** @nullable */
+    phone?: string | null;
+    /** @nullable */
+    email?: string | null;
+    /** @nullable */
+    photoUrl?: string | null;
+    /** @nullable */
+    cardNumber?: string | null;
+    /** @nullable */
+    notes?: string | null;
+    active: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }
+
+  export interface VisitorInput {
+    name: string;
+    /** @nullable */
+    company?: string | null;
+    type: VisitorType;
+    /** @nullable */
+    phone?: string | null;
+    /** @nullable */
+    email?: string | null;
+    /** @nullable */
+    photoUrl?: string | null;
+    /** @nullable */
+    cardNumber?: string | null;
+    /** @nullable */
+    notes?: string | null;
+    active?: boolean;
+  }
+
+  export interface VisitorVisit {
+    id: number;
+    visitorId: number;
+    /** @nullable */
+    purpose?: string | null;
+    /** @nullable */
+    hostName?: string | null;
+    checkIn: string;
+    /** @nullable */
+    checkOut?: string | null;
+    /** @nullable */
+    notes?: string | null;
+    createdAt: string;
+  }
+
+  export interface VisitorVisitInput {
+    /** @nullable */
+    purpose?: string | null;
+    /** @nullable */
+    hostName?: string | null;
+    /** @nullable */
+    notes?: string | null;
+    /** @nullable */
+    checkOut?: string | null;
+  }
+
+  export interface VisitorVisitWithInfo {
+    id: number;
+    visitorId: number;
+    /** @nullable */
+    visitorName?: string | null;
+    /** @nullable */
+    visitorCompany?: string | null;
+    /** @nullable */
+    visitorType?: string | null;
+    /** @nullable */
+    purpose?: string | null;
+    /** @nullable */
+    hostName?: string | null;
+    checkIn: string;
+    /** @nullable */
+    checkOut?: string | null;
+    /** @nullable */
+    notes?: string | null;
+  }
+  

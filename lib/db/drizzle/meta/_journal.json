@@ -15,6 +15,13 @@
       "when": 1783956000000,
       "tag": "0001_add_breaks_column",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783970000000,
+      "tag": "0002_add_visitors",
+      "breakpoints": true
     }
   ]
 }

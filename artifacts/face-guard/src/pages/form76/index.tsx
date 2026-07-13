@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
+import * as XLSX from "xlsx";
 import {
   ChevronLeft, ChevronRight, Download, Users, Clock,
-  TrendingUp, Moon, AlertTriangle, Filter,
+  TrendingUp, Moon, AlertTriangle, Filter, FileSpreadsheet,
 } from "lucide-react";
 import { useGetAttendanceForm76, useListDepartments } from "@workspace/api-client-react";
 import type { Form76Row, Form76Response } from "@workspace/api-client-react";
@@ -169,6 +170,46 @@ export default function Form76Page() {
     URL.revokeObjectURL(url);
   }
 
+  function exportXlsx() {
+    if (!data) return;
+    const d = data as Form76Response;
+
+    const dayNums = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    const header = [
+      "Служител", "Таб. №", "Отдел",
+      ...dayNums.map(n => {
+        const dow = dayOfWeek(year, month, n);
+        return `${n}\n${BG_WEEKDAY_SHORT[dow]}`;
+      }),
+      "Отр. дни", "Часове", "Норма", "Баланс", "Нощ",
+    ];
+
+    const rows = d.rows.map(r => [
+      r.employeeName,
+      r.employeeNumber,
+      r.departmentName,
+      ...r.days.map(day => day.code || ""),
+      r.totalDaysWorked,
+      +r.totalHours.toFixed(2),
+      +r.normHours.toFixed(2),
+      +(r.totalHours - r.normHours).toFixed(2),
+      +r.nightHours.toFixed(2),
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+
+    // Column widths
+    ws["!cols"] = [
+      { wch: 22 }, { wch: 8 }, { wch: 16 },
+      ...dayNums.map(() => ({ wch: 4 })),
+      { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 6 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `Ф76 ${BG_MONTHS[month]} ${year}`);
+    XLSX.writeFile(wb, `форма76-${year}-${pad2(month)}.xlsx`);
+  }
+
   const balance = data ? data.totalHours - (data.normHours * data.totalEmployees) : 0;
 
   return (
@@ -182,7 +223,11 @@ export default function Form76Page() {
         <div className="flex items-center gap-2">
           <Button onClick={exportCsv} variant="outline" size="sm" className="gap-2" disabled={!data}>
             <Download className="h-4 w-4" />
-            Експорт CSV
+            CSV
+          </Button>
+          <Button onClick={exportXlsx} variant="outline" size="sm" className="gap-2 text-green-700 border-green-300 hover:bg-green-50" disabled={!data}>
+            <FileSpreadsheet className="h-4 w-4" />
+            Excel
           </Button>
         </div>
       </div>

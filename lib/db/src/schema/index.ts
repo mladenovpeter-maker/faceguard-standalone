@@ -10,3 +10,4 @@ export * from "./system_users";
 export * from "./departments";
 export * from "./department_work_schedules";
 export * from "./employee_photos";
+export * from "./visitors";

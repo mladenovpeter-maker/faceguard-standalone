@@ -66,8 +66,8 @@ function toMin(t: string): number {
   return h * 60 + m;
 }
 
-const LATE_GRACE_MINUTES  = 5;
-const EARLY_GRACE_MINUTES = 5;
+const LATE_GRACE_MINUTES  = 30;
+const EARLY_GRACE_MINUTES = 30;
 
 type ScheduleInfo = {
   scheduleStatus: "on_time" | "late" | "no_schedule";
