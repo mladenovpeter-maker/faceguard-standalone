@@ -1,14 +1,15 @@
-import { useCreateEmployee, useUploadEmployeePhoto, useAddEmployeePhoto, useListDepartments } from "@workspace/api-client-react";
+import { useCreateEmployee, useUploadEmployeePhoto, useAddEmployeePhoto, useListDepartments, useListCameras, useTestCameraConnection } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload, Plus, X, ScanFace } from "lucide-react";
+import { ArrowLeft, Upload, Plus, X, ScanFace, Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useRef } from "react";
 
@@ -30,11 +31,16 @@ export default function EmployeeNew() {
   const uploadPhoto = useUploadEmployeePhoto();
   const addPhoto = useAddEmployeePhoto();
   const { data: departments = [] } = useListDepartments();
+  const { data: cameras = [] } = useListCameras();
+  const testCamera = useTestCameraConnection();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [photos, setPhotos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [capturingId, setCapturingId] = useState<number | null>(null);
+  const [capturePreview, setCapturePreview] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof employeeSchema>>({
     resolver: zodResolver(employeeSchema),
@@ -52,7 +58,6 @@ export default function EmployeeNew() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const result = event.target?.result as string;
@@ -64,6 +69,30 @@ export default function EmployeeNew() {
 
   function handleRemovePhoto(index: number) {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleCaptureFromCamera(cameraId: number) {
+    setCapturingId(cameraId);
+    setCapturePreview(null);
+    testCamera.mutate({ id: cameraId }, {
+      onSuccess: (result) => {
+        if (result.snapshotBase64) {
+          setCapturePreview(result.snapshotBase64);
+        } else {
+          toast({ title: "Камерата не е достъпна", variant: "destructive" });
+        }
+      },
+      onError: (err: any) => toast({ title: "Грешка при снимане", description: err.message, variant: "destructive" }),
+      onSettled: () => setCapturingId(null),
+    });
+  }
+
+  function handleUseCapturedPhoto() {
+    if (!capturePreview) return;
+    const base64 = capturePreview.split(',')[1];
+    setPhotos((prev) => [...prev, base64]);
+    setCaptureOpen(false);
+    setCapturePreview(null);
   }
 
   async function onSubmit(values: z.infer<typeof employeeSchema>) {
@@ -98,6 +127,46 @@ export default function EmployeeNew() {
         </Button>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Регистрация на служител</h1>
       </div>
+
+      {/* Camera capture dialog */}
+      <Dialog open={captureOpen} onOpenChange={(o) => { if (!o) { setCaptureOpen(false); setCapturePreview(null); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Снимай от камера</DialogTitle>
+          </DialogHeader>
+          {!capturePreview ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Избери камера за заснемане на служителя:</p>
+              <div className="grid gap-2">
+                {cameras.map(cam => (
+                  <Button
+                    key={cam.id}
+                    variant="outline"
+                    className="justify-start"
+                    disabled={capturingId === cam.id}
+                    onClick={() => handleCaptureFromCamera(cam.id)}
+                  >
+                    <Camera className="h-4 w-4 mr-2 text-muted-foreground" />
+                    {cam.name}
+                    <span className="ml-auto font-mono text-xs text-muted-foreground">{cam.host}</span>
+                    {capturingId === cam.id && <span className="ml-2 text-xs">Снима...</span>}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-lg overflow-hidden border border-border">
+                <img src={capturePreview} alt="Снимка от камера" className="w-full object-contain max-h-72" />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setCapturePreview(null)}>Снимай отново</Button>
+                <Button onClick={handleUseCapturedPhoto}>Използвай снимката</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -149,15 +218,30 @@ export default function EmployeeNew() {
                       ))}
                     </div>
                   )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={photos.length >= MAX_PHOTOS}
-                  >
-                    <Plus className="h-4 w-4 mr-2" /> Добави снимка
-                  </Button>
+                  <div className="flex flex-col gap-2 w-full">
+                    {cameras.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => { setCapturePreview(null); setCaptureOpen(true); }}
+                        disabled={photos.length >= MAX_PHOTOS}
+                      >
+                        <Camera className="h-4 w-4 mr-2" /> Снимай от камера
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={photos.length >= MAX_PHOTOS}
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Добави снимка
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground text-center px-4">
                     Добавете 2–5 ясни, добре осветени снимки от различни ъгли за по-точно разпознаване.
                   </p>
