@@ -19,6 +19,7 @@ const selectScheduleWithJoins = async (conditions?: any) => {
       dayOfWeek: departmentWorkSchedulesTable.dayOfWeek,
       startTime: departmentWorkSchedulesTable.startTime,
       endTime: departmentWorkSchedulesTable.endTime,
+      breaks: departmentWorkSchedulesTable.breaks,
     })
     .from(departmentWorkSchedulesTable)
     .leftJoin(departmentsTable, eq(departmentsTable.id, departmentWorkSchedulesTable.departmentId))
@@ -48,6 +49,8 @@ router.post("/department-schedules", async (req, res): Promise<void> => {
     return;
   }
 
+  const breaks = body.data.breaks ?? [];
+
   const [upserted] = await db
     .insert(departmentWorkSchedulesTable)
     .values({
@@ -55,12 +58,14 @@ router.post("/department-schedules", async (req, res): Promise<void> => {
       dayOfWeek: body.data.dayOfWeek,
       startTime: body.data.startTime,
       endTime: body.data.endTime,
+      breaks,
     })
     .onConflictDoUpdate({
       target: [departmentWorkSchedulesTable.departmentId, departmentWorkSchedulesTable.dayOfWeek],
       set: {
         startTime: body.data.startTime,
         endTime: body.data.endTime,
+        breaks,
       },
     })
     .returning({ id: departmentWorkSchedulesTable.id });
