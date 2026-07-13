@@ -55,16 +55,18 @@ export default function EmployeeNew() {
   });
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files || []);
     e.target.value = "";
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      const base64 = result.split(',')[1];
-      setPhotos((prev) => [...prev, base64]);
-    };
-    reader.readAsDataURL(file);
+    if (!files.length) return;
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        const base64 = result.split(',')[1];
+        setPhotos((prev) => prev.length < MAX_PHOTOS ? [...prev, base64] : prev);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   function handleRemovePhoto(index: number) {
@@ -184,6 +186,7 @@ export default function EmployeeNew() {
                     ref={fileInputRef}
                     className="hidden"
                     accept="image/*"
+                    multiple
                     onChange={handlePhotoChange}
                   />
                   {photos.length === 0 ? (
