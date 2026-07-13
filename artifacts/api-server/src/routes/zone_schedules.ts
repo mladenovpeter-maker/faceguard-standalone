@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, zoneWorkSchedulesTable, zonesTable } from "@workspace/db";
 import {
   ListZoneSchedulesQueryParams,
@@ -19,6 +19,7 @@ const selectScheduleWithJoins = async (conditions?: any) => {
       dayOfWeek: zoneWorkSchedulesTable.dayOfWeek,
       startTime: zoneWorkSchedulesTable.startTime,
       endTime: zoneWorkSchedulesTable.endTime,
+      breaks: zoneWorkSchedulesTable.breaks,
     })
     .from(zoneWorkSchedulesTable)
     .leftJoin(zonesTable, eq(zonesTable.id, zoneWorkSchedulesTable.zoneId))
@@ -48,6 +49,8 @@ router.post("/zone-schedules", async (req, res): Promise<void> => {
     return;
   }
 
+  const breaks = body.data.breaks ?? [];
+
   const [upserted] = await db
     .insert(zoneWorkSchedulesTable)
     .values({
@@ -55,12 +58,14 @@ router.post("/zone-schedules", async (req, res): Promise<void> => {
       dayOfWeek: body.data.dayOfWeek,
       startTime: body.data.startTime,
       endTime: body.data.endTime,
+      breaks,
     })
     .onConflictDoUpdate({
       target: [zoneWorkSchedulesTable.zoneId, zoneWorkSchedulesTable.dayOfWeek],
       set: {
         startTime: body.data.startTime,
         endTime: body.data.endTime,
+        breaks,
       },
     })
     .returning({ id: zoneWorkSchedulesTable.id });
