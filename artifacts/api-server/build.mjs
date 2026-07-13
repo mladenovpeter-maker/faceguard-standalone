@@ -18,6 +18,7 @@ async function buildAll() {
     entryPoints: [
       path.resolve(artifactDir, "src/index.ts"),
       path.resolve(artifactDir, "src/worker/camera-ingest.ts"),
+      path.resolve(artifactDir, "src/lib/face-recognition-worker.ts"),
     ],
     platform: "node",
     bundle: true,
