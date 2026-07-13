@@ -33,9 +33,10 @@ function spawnWorker(): Worker {
     }
   });
 
-  w.on("error", (err) => {
+  w.on("error", (err: unknown) => {
+    const error = err instanceof Error ? err : new Error(String(err));
     logger.error({ err }, "Face recognition worker crashed — rejecting all pending jobs");
-    for (const p of pending.values()) p.reject(err);
+    for (const p of pending.values()) p.reject(error);
     pending.clear();
     worker = null;
   });
