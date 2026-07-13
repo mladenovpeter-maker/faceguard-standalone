@@ -36,6 +36,8 @@ services:
       PORT: "8080"
       NODE_ENV: production
       DATABASE_URL: postgres://faceguard:${POSTGRES_PASSWORD:-faceguard}@postgres:5432/faceguard
+    volumes:
+      - faceguard-uploads:/app/artifacts/api-server/uploads
     ports:
       - "8080:8080"
 
@@ -73,3 +75,4 @@ services:
 
 volumes:
   faceguard-db-data:
+  faceguard-uploads:
