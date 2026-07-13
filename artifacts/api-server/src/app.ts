@@ -4,7 +4,6 @@ import pinoHttp from "pino-http";
 import path from "path";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { seedSystemUsers } from "./lib/seed-users";
 import { getTokenData, extractBearerToken } from "./lib/auth-tokens";
 
 const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
@@ -64,8 +63,5 @@ app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
 app.use("/api/uploads", express.static(path.resolve(workspaceRoot, "artifacts/api-server/uploads")));
 
 app.use("/api", router);
-
-/* ── Seed default users on startup ── */
-seedSystemUsers().catch((err) => logger.error({ err }, "Failed to seed system users"));
 
 export default app;
