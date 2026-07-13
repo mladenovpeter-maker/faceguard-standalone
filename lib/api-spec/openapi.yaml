@@ -1093,9 +1093,23 @@ components:
           type: string
           minLength: 1
 
+    ScheduleBreak:
+      type: object
+      required: [name, startTime, endTime]
+      properties:
+        name:
+          type: string
+          description: "e.g. Обедна почивка"
+        startTime:
+          type: string
+          description: "HH:MM"
+        endTime:
+          type: string
+          description: "HH:MM"
+
     DepartmentWorkSchedule:
       type: object
-      required: [id, departmentId, dayOfWeek, startTime, endTime]
+      required: [id, departmentId, dayOfWeek, startTime, endTime, breaks]
       properties:
         id:
           type: integer
@@ -1114,6 +1128,10 @@ components:
         endTime:
           type: string
           description: "HH:MM"
+        breaks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleBreak"
 
     DepartmentWorkScheduleInput:
       type: object
@@ -1129,6 +1147,10 @@ components:
           type: string
         endTime:
           type: string
+        breaks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleBreak"
 
     PhotoUpload:
       type: object
@@ -1591,7 +1613,7 @@ components:
 
     ZoneWorkSchedule:
       type: object
-      required: [id, zoneId, dayOfWeek, startTime, endTime]
+      required: [id, zoneId, dayOfWeek, startTime, endTime, breaks]
       properties:
         id:
           type: integer
@@ -1610,6 +1632,10 @@ components:
         endTime:
           type: string
           description: "HH:MM"
+        breaks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleBreak"
 
     ZoneWorkScheduleInput:
       type: object
@@ -1625,6 +1651,10 @@ components:
           type: string
         endTime:
           type: string
+        breaks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleBreak"
 
     DashboardSummary:
       type: object
