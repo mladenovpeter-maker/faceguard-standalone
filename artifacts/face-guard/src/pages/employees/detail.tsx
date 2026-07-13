@@ -91,28 +91,42 @@ export default function EmployeeDetail() {
     photoInputRef.current?.click();
   }
 
-  function handlePhotoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  async function handlePhotoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
     e.target.value = "";
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      const photoBase64 = result.split(',')[1];
-      addPhoto.mutate({ id: employeeId, data: { photoBase64 } }, {
-        onSuccess: (photo) => {
-          toast({
-            title: "Снимката е добавена",
-            description: photo.hasFaceDescriptor
-              ? "Лицето е разпознато и запазено за AI съвпадение."
-              : "Не бе открито лице на снимката — тя ще се показва, но няма да се използва за AI разпознаване.",
+    if (!files.length) return;
+
+    const canAdd = MAX_PHOTOS - photos.length;
+    const toUpload = files.slice(0, canAdd);
+    if (toUpload.length === 0) {
+      toast({ title: "Максимумът е достигнат", description: `Може да добавите най-много ${MAX_PHOTOS} снимки.`, variant: "destructive" });
+      return;
+    }
+    if (files.length > canAdd) {
+      toast({ title: `Качват се само ${toUpload.length} снимки`, description: `Достигнат е лимитът от ${MAX_PHOTOS}.` });
+    }
+
+    let added = 0;
+    let withFace = 0;
+    for (const file of toUpload) {
+      await new Promise<void>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const photoBase64 = (ev.target?.result as string).split(',')[1];
+          addPhoto.mutate({ id: employeeId, data: { photoBase64 } }, {
+            onSuccess: (photo) => { added++; if (photo.hasFaceDescriptor) withFace++; resolve(); },
+            onError: () => resolve(),
           });
-          queryClient.invalidateQueries({ queryKey: getListEmployeePhotosQueryKey(employeeId) });
-        },
-        onError: (err: any) => toast({ title: "Грешка при качване", description: err.message, variant: "destructive" }),
+        };
+        reader.readAsDataURL(file);
       });
-    };
-    reader.readAsDataURL(file);
+    }
+
+    queryClient.invalidateQueries({ queryKey: getListEmployeePhotosQueryKey(employeeId) });
+    toast({
+      title: `${added} снимки добавени`,
+      description: `${withFace} с открито лице, ${added - withFace} без.`,
+    });
   }
 
   function handleDeletePhoto(photoId: number) {
@@ -303,6 +317,7 @@ export default function EmployeeDetail() {
                 ref={photoInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={handlePhotoFileChange}
               />
