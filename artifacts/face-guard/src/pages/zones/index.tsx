@@ -2,14 +2,14 @@ import {
   useListZones, useCreateZone, useUpdateZone, useDeleteZone, getListZonesQueryKey,
   useListZoneSchedules, useUpsertZoneSchedule, useDeleteZoneSchedule, getListZoneSchedulesQueryKey,
 } from "@workspace/api-client-react";
-import type { ZoneWorkSchedule } from "@workspace/api-client-react";
+import type { ScheduleBreak } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Map, Plus, Shield, ShieldAlert, ShieldCheck, Pencil, Trash2, Clock, X } from "lucide-react";
+import { Map as MapIcon, Plus, Shield, ShieldAlert, ShieldCheck, Pencil, Trash2, Clock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 /* ─── Zone form ─── */
@@ -100,12 +100,33 @@ function WorkScheduleDialog({ zoneId, zoneName }: { zoneId: number; zoneName: st
 
   const invalidate = () => qc.invalidateQueries({ queryKey: getListZoneSchedulesQueryKey({ zoneId }) });
 
+  const [localBreaks, setLocalBreaks] = useState<Map<number, ScheduleBreak[]>>(new Map());
+
+  useEffect(() => {
+    setLocalBreaks(prev => {
+      const next = new Map(prev);
+      for (const s of schedules) {
+        if (!next.has(s.dayOfWeek)) next.set(s.dayOfWeek, s.breaks ?? []);
+      }
+      return next;
+    });
+  }, [schedules]);
+
+  const byDay = new Map(schedules.map(s => [s.dayOfWeek, s]));
+
   async function toggleDay(dayOfWeek: number, isWorking: boolean) {
     if (isWorking) {
       const slot = byDay.get(dayOfWeek);
-      if (slot) await del.mutateAsync({ id: slot.id }, { onSuccess: invalidate, onError: () => toast({ title: "Грешка", variant: "destructive" }) });
+      if (slot) {
+        setLocalBreaks(prev => { const m = new Map(prev); m.delete(dayOfWeek); return m; });
+        await del.mutateAsync({ id: slot.id }, { onSuccess: invalidate, onError: () => toast({ title: "Грешка", variant: "destructive" }) });
+      }
     } else {
-      await upsert.mutateAsync({ data: { zoneId, dayOfWeek, startTime: "08:00", endTime: "17:00" } }, { onSuccess: invalidate, onError: () => toast({ title: "Грешка", variant: "destructive" }) });
+      setLocalBreaks(prev => { const m = new Map(prev); m.set(dayOfWeek, []); return m; });
+      await upsert.mutateAsync(
+        { data: { zoneId, dayOfWeek, startTime: "08:00", endTime: "17:00", breaks: [] } },
+        { onSuccess: invalidate, onError: () => toast({ title: "Грешка", variant: "destructive" }) },
+      );
     }
   }
 
@@ -114,10 +135,43 @@ function WorkScheduleDialog({ zoneId, zoneName }: { zoneId: number; zoneName: st
     if (!slot) return;
     const startTime = field === "startTime" ? value : slot.startTime;
     const endTime   = field === "endTime"   ? value : slot.endTime;
-    await upsert.mutateAsync({ data: { zoneId, dayOfWeek, startTime, endTime } }, { onSuccess: invalidate, onError: () => toast({ title: "Грешка", variant: "destructive" }) });
+    const breaks    = localBreaks.get(dayOfWeek) ?? slot.breaks ?? [];
+    await upsert.mutateAsync(
+      { data: { zoneId, dayOfWeek, startTime, endTime, breaks } },
+      { onSuccess: invalidate, onError: () => toast({ title: "Грешка", variant: "destructive" }) },
+    );
   }
 
-  const byDay = new Map(schedules.map(s => [s.dayOfWeek, s]));
+  async function saveBreaks(dayOfWeek: number, breaks: ScheduleBreak[]) {
+    const slot = byDay.get(dayOfWeek);
+    if (!slot) return;
+    setLocalBreaks(prev => { const m = new Map(prev); m.set(dayOfWeek, breaks); return m; });
+    await upsert.mutateAsync(
+      { data: { zoneId, dayOfWeek, startTime: slot.startTime, endTime: slot.endTime, breaks } },
+      { onSuccess: invalidate, onError: () => toast({ title: "Грешка", variant: "destructive" }) },
+    );
+  }
+
+  function addBreak(dayOfWeek: number) {
+    const current = localBreaks.get(dayOfWeek) ?? [];
+    const next = [...current, { name: "Технологична почивка", startTime: "10:00", endTime: "10:15" }];
+    saveBreaks(dayOfWeek, next);
+  }
+
+  function removeBreak(dayOfWeek: number, index: number) {
+    const current = localBreaks.get(dayOfWeek) ?? [];
+    saveBreaks(dayOfWeek, current.filter((_, i) => i !== index));
+  }
+
+  function updateBreakField(dayOfWeek: number, index: number, field: keyof ScheduleBreak, value: string) {
+    setLocalBreaks(prev => {
+      const m = new Map(prev);
+      const arr = [...(m.get(dayOfWeek) ?? [])];
+      arr[index] = { ...arr[index], [field]: value };
+      m.set(dayOfWeek, arr);
+      return m;
+    });
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -126,7 +180,7 @@ function WorkScheduleDialog({ zoneId, zoneName }: { zoneId: number; zoneName: st
           <Clock className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[460px]">
+      <DialogContent className="sm:max-w-[540px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Работно Време — {zoneName}</DialogTitle>
         </DialogHeader>
@@ -138,37 +192,92 @@ function WorkScheduleDialog({ zoneId, zoneName }: { zoneId: number; zoneName: st
             {DAYS.map(d => {
               const slot = byDay.get(d.iso);
               const isWorking = !!slot;
+              const breaks = localBreaks.get(d.iso) ?? slot?.breaks ?? [];
+
               return (
-                <div key={d.iso} className={`flex items-center gap-3 py-2.5 ${isWorking ? "" : "opacity-40"}`}>
-                  <input
-                    type="checkbox"
-                    checked={isWorking}
-                    onChange={() => toggleDay(d.iso, isWorking)}
-                    className="h-4 w-4 rounded accent-primary cursor-pointer shrink-0"
-                  />
-                  <span className={`text-sm w-28 shrink-0 ${isWorking ? "font-medium text-foreground" : "text-muted-foreground"}`}>
-                    {d.label}
-                  </span>
-                  {isWorking && slot ? (
-                    <div className="flex items-center gap-2 ml-auto">
-                      <Input
-                        type="time"
-                        defaultValue={slot.startTime}
-                        key={`${d.iso}-start-${slot.startTime}`}
-                        className="h-7 w-24 text-xs font-mono px-2"
-                        onBlur={e => updateTime(d.iso, "startTime", e.target.value)}
-                      />
-                      <span className="text-xs text-muted-foreground">—</span>
-                      <Input
-                        type="time"
-                        defaultValue={slot.endTime}
-                        key={`${d.iso}-end-${slot.endTime}`}
-                        className="h-7 w-24 text-xs font-mono px-2"
-                        onBlur={e => updateTime(d.iso, "endTime", e.target.value)}
-                      />
+                <div key={d.iso} className="py-2.5 space-y-1.5">
+                  {/* Day row */}
+                  <div className={`flex items-center gap-3 ${isWorking ? "" : "opacity-40"}`}>
+                    <input
+                      type="checkbox"
+                      checked={isWorking}
+                      onChange={() => toggleDay(d.iso, isWorking)}
+                      className="h-4 w-4 rounded accent-primary cursor-pointer shrink-0"
+                    />
+                    <span className={`text-sm w-28 shrink-0 ${isWorking ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+                      {d.label}
+                    </span>
+                    {isWorking && slot ? (
+                      <div className="flex items-center gap-2 ml-auto">
+                        <Input
+                          type="time"
+                          defaultValue={slot.startTime}
+                          key={`${d.iso}-start-${slot.startTime}`}
+                          className="h-7 w-24 text-xs font-mono px-2"
+                          onBlur={e => updateTime(d.iso, "startTime", e.target.value)}
+                        />
+                        <span className="text-xs text-muted-foreground">—</span>
+                        <Input
+                          type="time"
+                          defaultValue={slot.endTime}
+                          key={`${d.iso}-end-${slot.endTime}`}
+                          className="h-7 w-24 text-xs font-mono px-2"
+                          onBlur={e => updateTime(d.iso, "endTime", e.target.value)}
+                        />
+                      </div>
+                    ) : (
+                      <span className="ml-auto text-xs text-muted-foreground italic">почивен</span>
+                    )}
+                  </div>
+
+                  {/* Breaks sub-section */}
+                  {isWorking && (
+                    <div className="ml-7 space-y-1">
+                      {breaks.map((brk, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <Input
+                            defaultValue={brk.name}
+                            key={`${d.iso}-brk-name-${i}-${brk.name}`}
+                            placeholder="Вид почивка"
+                            className="h-6 text-xs px-2 flex-1 min-w-0"
+                            onChange={e => updateBreakField(d.iso, i, "name", e.target.value)}
+                            onBlur={() => saveBreaks(d.iso, breaks)}
+                          />
+                          <Input
+                            type="time"
+                            defaultValue={brk.startTime}
+                            key={`${d.iso}-brk-s-${i}`}
+                            className="h-6 w-20 text-xs font-mono px-1.5 shrink-0"
+                            onChange={e => updateBreakField(d.iso, i, "startTime", e.target.value)}
+                            onBlur={() => saveBreaks(d.iso, breaks)}
+                          />
+                          <span className="text-xs text-muted-foreground">—</span>
+                          <Input
+                            type="time"
+                            defaultValue={brk.endTime}
+                            key={`${d.iso}-brk-e-${i}`}
+                            className="h-6 w-20 text-xs font-mono px-1.5 shrink-0"
+                            onChange={e => updateBreakField(d.iso, i, "endTime", e.target.value)}
+                            onBlur={() => saveBreaks(d.iso, breaks)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeBreak(d.iso, i)}
+                            className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addBreak(d.iso)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-0.5"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Добави почивка
+                      </button>
                     </div>
-                  ) : (
-                    <span className="ml-auto text-xs text-muted-foreground italic">почивен</span>
                   )}
                 </div>
               );
@@ -275,7 +384,7 @@ export default function ZoneList() {
                 <TableRow key={zone.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
-                      <Map className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <MapIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                       {zone.name}
                     </div>
                   </TableCell>
@@ -284,10 +393,8 @@ export default function ZoneList() {
                   <TableCell className="text-center font-mono text-muted-foreground">{zone.cameraCount || 0}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      {/* Work schedule */}
                       <WorkScheduleDialog zoneId={zone.id} zoneName={zone.name} />
 
-                      {/* Edit */}
                       <Button
                         variant="ghost" size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
@@ -296,7 +403,6 @@ export default function ZoneList() {
                         <Pencil className="h-4 w-4" />
                       </Button>
 
-                      {/* Delete */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
