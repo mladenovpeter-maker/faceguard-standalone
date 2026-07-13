@@ -8,7 +8,7 @@ FROM node:24-bookworm-slim AS build
 RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 
 WORKDIR /repo
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc* tsconfig.base.json ./
 COPY lib ./lib
 COPY artifacts/face-guard ./artifacts/face-guard
 COPY scripts ./scripts
