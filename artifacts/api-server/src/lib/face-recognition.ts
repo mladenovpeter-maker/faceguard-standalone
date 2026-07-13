@@ -43,44 +43,85 @@ async function ensureModelsLoaded(): Promise<void> {
   if (!modelsLoadingPromise) {
     modelsLoadingPromise = (async () => {
       await backendReadyPromise;
-      await faceapi.nets.tinyFaceDetector.loadFromDisk(MODELS_DIR);
+      // SsdMobilenetv1 is the primary detector — more robust than TinyFaceDetector,
+      // handles close-ups, side angles, and varied lighting better.
+      await faceapi.nets.ssdMobilenetv1.loadFromDisk(MODELS_DIR);
       await faceapi.nets.faceLandmark68Net.loadFromDisk(MODELS_DIR);
       await faceapi.nets.faceRecognitionNet.loadFromDisk(MODELS_DIR);
+      // TinyFaceDetector as secondary (already loaded weights kept for fallback)
+      await faceapi.nets.tinyFaceDetector.loadFromDisk(MODELS_DIR);
       modelsLoaded = true;
-      logger.info({ MODELS_DIR }, "Face recognition models loaded");
+      logger.info({ MODELS_DIR }, "Face recognition models loaded (SSD + Tiny)");
     })();
   }
   return modelsLoadingPromise;
 }
 
 /**
- * Computes a 128-dimensional face descriptor from an image buffer.
- * Returns null if no face could be detected in the image.
- *
- * Tries multiple inputSizes so it works for both close-up selfies
- * (small inputSize) and distant faces (large inputSize).
+ * Tries to detect a face using SsdMobilenetv1 at progressively lower confidence
+ * thresholds, then falls back to TinyFaceDetector if SSD finds nothing.
+ * Returns null only if no face is found by any method.
  */
 export async function computeFaceDescriptor(imageBuffer: Buffer): Promise<number[] | null> {
   await ensureModelsLoaded();
   const image = await canvasLib.loadImage(imageBuffer);
+  logger.info({ width: image.width, height: image.height, bufLen: imageBuffer.length }, "Image loaded for detection");
 
-  const inputSizes: number[] = [320, 416, 512, 608];
-  for (const inputSize of inputSizes) {
+  // Draw onto a canvas (required by face-api in Node.js)
+  const canvas = canvasLib.createCanvas(image.width, image.height);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(image, 0, 0);
+
+  // --- Primary: SsdMobilenetv1 ---
+  // minConfidence range: 0.1 (very permissive) → 0.5 (default)
+  for (const minConfidence of [0.1, 0.2, 0.3]) {
+    const detection = await faceapi
+      .detectSingleFace(canvas as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence }))
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (detection) {
+      logger.info({ detector: "ssd", minConfidence, score: detection.detection.score }, "Face detected");
+      return Array.from(detection.descriptor);
+    }
+  }
+
+  // --- Secondary: TinyFaceDetector across multiple inputSizes ---
+  for (const inputSize of [160, 224, 320, 416, 512, 608]) {
     const detection = await faceapi
       .detectSingleFace(
-        image as unknown as faceapi.TNetInput,
-        new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.2 }),
+        canvas as unknown as faceapi.TNetInput,
+        new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.1 }),
       )
       .withFaceLandmarks()
       .withFaceDescriptor();
 
     if (detection) {
-      logger.info({ inputSize }, "Face detected");
+      logger.info({ detector: "tiny", inputSize, score: detection.detection.score }, "Face detected");
       return Array.from(detection.descriptor);
     }
   }
 
-  logger.warn("No face detected at any inputSize");
+  // --- Last resort: try with image rotated 90° (handles EXIF-unaware canvas loaders) ---
+  const rotCanvas = canvasLib.createCanvas(image.height, image.width);
+  const rCtx = rotCanvas.getContext("2d");
+  rCtx.translate(image.height, 0);
+  rCtx.rotate(Math.PI / 2);
+  rCtx.drawImage(image, 0, 0);
+
+  for (const minConfidence of [0.1, 0.2]) {
+    const detection = await faceapi
+      .detectSingleFace(rotCanvas as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence }))
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (detection) {
+      logger.info({ detector: "ssd-rotated", minConfidence, score: detection.detection.score }, "Face detected (rotated)");
+      return Array.from(detection.descriptor);
+    }
+  }
+
+  logger.warn({ width: image.width, height: image.height }, "No face detected by any method");
   return null;
 }
 
