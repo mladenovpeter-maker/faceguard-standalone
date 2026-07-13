@@ -56,20 +56,32 @@ async function ensureModelsLoaded(): Promise<void> {
 /**
  * Computes a 128-dimensional face descriptor from an image buffer.
  * Returns null if no face could be detected in the image.
+ *
+ * Tries multiple inputSizes so it works for both close-up selfies
+ * (small inputSize) and distant faces (large inputSize).
  */
 export async function computeFaceDescriptor(imageBuffer: Buffer): Promise<number[] | null> {
   await ensureModelsLoaded();
   const image = await canvasLib.loadImage(imageBuffer);
-  const detection = await faceapi
-    .detectSingleFace(
-      image as unknown as faceapi.TNetInput,
-      new faceapi.TinyFaceDetectorOptions({ inputSize: 608, scoreThreshold: 0.3 }),
-    )
-    .withFaceLandmarks()
-    .withFaceDescriptor();
 
-  if (!detection) return null;
-  return Array.from(detection.descriptor);
+  const inputSizes: number[] = [320, 416, 512, 608];
+  for (const inputSize of inputSizes) {
+    const detection = await faceapi
+      .detectSingleFace(
+        image as unknown as faceapi.TNetInput,
+        new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.2 }),
+      )
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (detection) {
+      logger.info({ inputSize }, "Face detected");
+      return Array.from(detection.descriptor);
+    }
+  }
+
+  logger.warn("No face detected at any inputSize");
+  return null;
 }
 
 function euclideanDistance(a: number[], b: number[]): number {
