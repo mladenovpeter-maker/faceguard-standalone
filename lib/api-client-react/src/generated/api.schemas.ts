@@ -420,6 +420,18 @@ export interface RecognitionInput {
   detectedAt: string;
 }
 
+/**
+ * @nullable
+ */
+export type AttendanceReportRowScheduleStatus = typeof AttendanceReportRowScheduleStatus[keyof typeof AttendanceReportRowScheduleStatus] | null;
+
+
+export const AttendanceReportRowScheduleStatus = {
+  on_time: 'on_time',
+  late: 'late',
+  no_schedule: 'no_schedule',
+} as const;
+
 export interface AttendanceReportRow {
   employeeId: number;
   employeeName: string;
@@ -446,6 +458,12 @@ export interface AttendanceReportRow {
   leaveType?: string | null;
   /** @nullable */
   leaveReason?: string | null;
+  /** @nullable */
+  scheduleStatus?: AttendanceReportRowScheduleStatus;
+  /** @nullable */
+  minutesLate?: number | null;
+  /** @nullable */
+  scheduleStart?: string | null;
 }
 
 export interface AttendanceReport {
@@ -455,6 +473,18 @@ export interface AttendanceReport {
   workingDays: number;
   rows: AttendanceReportRow[];
 }
+
+/**
+ * @nullable
+ */
+export type AttendanceRecordScheduleStatus = typeof AttendanceRecordScheduleStatus[keyof typeof AttendanceRecordScheduleStatus] | null;
+
+
+export const AttendanceRecordScheduleStatus = {
+  on_time: 'on_time',
+  late: 'late',
+  no_schedule: 'no_schedule',
+} as const;
 
 export interface AttendanceRecord {
   id: number;
@@ -474,6 +504,12 @@ export interface AttendanceRecord {
   zoneName?: string | null;
   /** @nullable */
   totalMinutes?: number | null;
+  /** @nullable */
+  scheduleStatus?: AttendanceRecordScheduleStatus;
+  /** @nullable */
+  minutesLate?: number | null;
+  /** @nullable */
+  scheduleStart?: string | null;
 }
 
 /**
