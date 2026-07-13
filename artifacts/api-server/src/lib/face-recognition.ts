@@ -23,13 +23,24 @@ faceapi.env.monkeyPatch({ Canvas, Image, ImageData } as unknown as Parameters<ty
 const backendReadyPromise = tf.setBackend("cpu").then(() => tf.ready());
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
-  ? path.resolve(process.cwd(), "../..")
-  : process.cwd();
 
-const MODELS_DIR = fs.existsSync(path.resolve(workspaceRoot, "artifacts/api-server/models"))
-  ? path.resolve(workspaceRoot, "artifacts/api-server/models")
-  : path.resolve(currentDir, "../../models");
+// Probe multiple candidate paths — works in all environments:
+//   Replit dev:  cwd = .../artifacts/api-server  → models/ sibling of src/
+//   Docker prod: cwd = /app, dist/ sibling of models/  → /app/models
+const MODELS_DIR = ((): string => {
+  const candidates = [
+    // Replit dev (cwd = artifacts/api-server)
+    path.resolve(process.cwd(), "models"),
+    // Docker prod (cwd = /app, dist/index.mjs compiled to /app/dist/)
+    path.resolve(currentDir, "../models"),
+    // Monorepo root fallback
+    path.resolve(process.cwd(), "artifacts/api-server/models"),
+    path.resolve(currentDir, "../../models"),
+  ];
+  const found = candidates.find(p => fs.existsSync(p));
+  if (!found) throw new Error(`Face models not found. Tried:\n${candidates.join("\n")}`);
+  return found;
+})();
 
 // Minimum descriptor distance to consider two faces a match (lower = stricter).
 // face-api's Euclidean distance: <0.6 is a widely used threshold for the same person.
