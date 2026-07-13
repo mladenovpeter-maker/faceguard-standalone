@@ -62,6 +62,7 @@ export * from './recognitionEvent';
 export * from './recognitionEventStatus';
 export * from './recognitionInput';
 export * from './recognitionInputStatus';
+export * from './scheduleBreak';
 export * from './todayAttendance';
 export * from './zone';
 export * from './zoneAccessLevel';
