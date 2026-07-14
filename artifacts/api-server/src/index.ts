@@ -1,6 +1,7 @@
 import path from "path";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { db, pool } from "@workspace/db";
+import { db, pool, recognitionEventsTable } from "@workspace/db";
+import { and, isNotNull, lt } from "drizzle-orm";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { seedSystemUsers } from "./lib/seed-users";
@@ -21,6 +22,30 @@ const migrationsFolder = process.env["NODE_ENV"] === "production"
   ? "/app/drizzle"
   : path.resolve(__dirname, "../../../lib/db/drizzle");
 
+const SNAPSHOT_TTL_MS = 30 * 60 * 1000;
+const SNAPSHOT_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+
+async function cleanupOldSnapshots() {
+  try {
+    const cutoff = new Date(Date.now() - SNAPSHOT_TTL_MS);
+    const result = await db
+      .update(recognitionEventsTable)
+      .set({ snapshotUrl: null })
+      .where(
+        and(
+          isNotNull(recognitionEventsTable.snapshotUrl),
+          lt(recognitionEventsTable.detectedAt, cutoff),
+        ),
+      );
+    const count = (result as unknown as { rowCount: number }).rowCount ?? 0;
+    if (count > 0) {
+      logger.info({ count, cutoffMinutes: 30 }, "Cleaned up old snapshots");
+    }
+  } catch (err) {
+    logger.warn({ err }, "Snapshot cleanup failed");
+  }
+}
+
 async function start() {
   logger.info({ migrationsFolder }, "Running database migrations");
   await migrate(db, { migrationsFolder });
@@ -28,6 +53,9 @@ async function start() {
 
   await seedSystemUsers();
   logger.info("Seed complete");
+
+  await cleanupOldSnapshots();
+  setInterval(() => { void cleanupOldSnapshots(); }, SNAPSHOT_CLEANUP_INTERVAL_MS);
 
   app.listen(port, (err) => {
     if (err) {
