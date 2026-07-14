@@ -48,6 +48,19 @@ const MODELS_DIR = ((): string => {
 // (e.g. ceiling-mounted camera vs frontal enrollment photos).
 export const FACE_MATCH_THRESHOLD = 0.65;
 
+// Minimum SSD detection confidence (0–1). Below this → not a face.
+// 0.3 causes false positives on car headlights/grilles.
+// 0.5 is the practical minimum for real human faces in a garage/hallway.
+// Override with FACE_MIN_CONFIDENCE env var for tuning.
+const FACE_MIN_CONFIDENCE = Number(process.env.FACE_MIN_CONFIDENCE ?? 0.5);
+
+// Minimum face bounding-box area as a fraction of the total image area (0–1).
+// A real human face from 2–4 m overhead covers ~3–15% of a 640px frame.
+// Car features (headlights, mirrors, grilles) are detected as much smaller "faces".
+// Default 0.008 = 0.8% — filters car parts while keeping overhead human faces.
+// Override with FACE_MIN_AREA_FRACTION env var for tuning.
+const FACE_MIN_AREA_FRACTION = Number(process.env.FACE_MIN_AREA_FRACTION ?? 0.008);
+
 let modelsLoaded = false;
 let modelsLoadingPromise: Promise<void> | null = null;
 
@@ -86,32 +99,65 @@ export async function computeAllFaceDescriptors(imageBuffer: Buffer): Promise<nu
   const ctx = canvas.getContext("2d");
   ctx.drawImage(image, 0, 0);
 
-  // --- Primary: SsdMobilenetv1 — detectAllFaces handles groups ---
-  const ssdDets = await faceapi
+  const imageArea = image.width * image.height;
+
+  /** Logs each raw detection and returns only those that pass quality filters. */
+  function filterDetections<T extends { detection: faceapi.FaceDetection }>(
+    dets: T[],
+    detector: string,
+  ): T[] {
+    const kept: T[] = [];
+    for (const d of dets) {
+      const { score, box } = d.detection;
+      const areaFraction = (box.width * box.height) / imageArea;
+      const pass = score >= FACE_MIN_CONFIDENCE && areaFraction >= FACE_MIN_AREA_FRACTION;
+      logger.info(
+        {
+          detector,
+          score: +score.toFixed(3),
+          boxW: Math.round(box.width),
+          boxH: Math.round(box.height),
+          areaFraction: +areaFraction.toFixed(4),
+          minConfidence: FACE_MIN_CONFIDENCE,
+          minAreaFraction: FACE_MIN_AREA_FRACTION,
+          pass,
+        },
+        pass ? "Detection PASSED filters" : "Detection REJECTED (too small or low confidence — likely car/object)",
+      );
+      if (pass) kept.push(d);
+    }
+    return kept;
+  }
+
+  // --- Primary: SsdMobilenetv1 — use a permissive threshold so we can log all
+  //     raw detections, then apply our own stricter filters.
+  const ssdRaw = await faceapi
     .detectAllFaces(canvas as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
     .withFaceLandmarks()
     .withFaceDescriptors();
+  const ssdDets = filterDetections(ssdRaw, "ssd");
   if (ssdDets.length > 0) {
-    logger.info({ detector: "ssd", count: ssdDets.length }, "Faces detected");
+    logger.info({ detector: "ssd", rawCount: ssdRaw.length, passedCount: ssdDets.length }, "SSD pass complete");
     return ssdDets.map((d) => Array.from(d.descriptor));
   }
 
   // --- Secondary: TinyFaceDetector (two sizes) ---
   for (const inputSize of [320, 416] as const) {
-    const dets = await faceapi
+    const tinyRaw = await faceapi
       .detectAllFaces(
         canvas as unknown as faceapi.TNetInput,
         new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.3 }),
       )
       .withFaceLandmarks()
       .withFaceDescriptors();
-    if (dets.length > 0) {
-      logger.info({ detector: "tiny", inputSize, count: dets.length }, "Faces detected");
-      return dets.map((d) => Array.from(d.descriptor));
+    const tinyDets = filterDetections(tinyRaw, `tiny-${inputSize}`);
+    if (tinyDets.length > 0) {
+      logger.info({ detector: "tiny", inputSize, rawCount: tinyRaw.length, passedCount: tinyDets.length }, "Tiny pass complete");
+      return tinyDets.map((d) => Array.from(d.descriptor));
     }
   }
 
-  logger.warn({ width: image.width, height: image.height }, "No faces detected by any method");
+  logger.info({ width: image.width, height: image.height }, "No faces passed filters");
   return [];
 }
 
