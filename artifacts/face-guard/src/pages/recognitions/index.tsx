@@ -206,6 +206,7 @@ function RegisterVisitorModal({
 export default function RecognitionList() {
   const [status, setStatus] = useState<"all" | "recognized" | "unknown" | "denied">("all");
   const [registerEvent, setRegisterEvent] = useState<RecognitionEvent | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const { data: recognitions, isLoading } = useListRecognitions({
     status: status === "all" ? undefined : status,
@@ -269,14 +270,13 @@ export default function RecognitionList() {
                 <TableRow key={event.id} className={event.status === "unknown" ? "bg-amber-50/40 dark:bg-amber-950/10" : ""}>
                   <TableCell>
                     {event.snapshotUrl ? (
-                      <Dialog>
-                        <div
-                          className="h-10 w-10 bg-muted rounded-md border border-border overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => {}}
-                        >
-                          <img src={event.snapshotUrl} alt="snapshot" className="h-full w-full object-cover" />
-                        </div>
-                      </Dialog>
+                      <div
+                        className="h-10 w-10 bg-muted rounded-md border border-border overflow-hidden flex items-center justify-center cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
+                        onClick={() => setPreviewUrl(event.snapshotUrl!)}
+                        title="Увеличи снимката"
+                      >
+                        <img src={event.snapshotUrl} alt="snapshot" className="h-full w-full object-cover" />
+                      </div>
                     ) : (
                       <div className="h-10 w-10 bg-muted rounded-md border border-border flex items-center justify-center">
                         <ImageIcon className="h-4 w-4 text-muted-foreground" />
@@ -337,6 +337,24 @@ export default function RecognitionList() {
           onClose={() => setRegisterEvent(null)}
         />
       )}
+
+      {/* Full-size snapshot preview */}
+      <Dialog open={!!previewUrl} onOpenChange={v => { if (!v) setPreviewUrl(null); }}>
+        <DialogContent className="max-w-2xl p-2">
+          <DialogHeader className="px-2 pt-2 pb-0">
+            <DialogTitle className="text-sm text-muted-foreground font-normal">Снимка от камера</DialogTitle>
+          </DialogHeader>
+          {previewUrl && (
+            <div className="rounded-lg overflow-hidden bg-black">
+              <img
+                src={previewUrl}
+                alt="Снимка от събитие"
+                className="w-full h-auto max-h-[70vh] object-contain"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
