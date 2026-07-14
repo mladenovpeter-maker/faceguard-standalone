@@ -3,7 +3,7 @@ import {
   useListZoneSchedules, useUpsertZoneSchedule, useDeleteZoneSchedule, getListZoneSchedulesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Map as MapIcon, Plus, Shield, ShieldAlert, ShieldCheck, Pencil, Trash2, Clock } from "lucide-react";
+import { Map as MapIcon, Plus, Pencil, Trash2, Clock, LogIn, LogOut, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ import type { UpsertScheduleData, ScheduleDay } from "@/components/schedule-edit
 const zoneSchema = z.object({
   name: z.string().min(1, "Наименованието е задължително"),
   description: z.string().optional(),
-  accessLevel: z.enum(["public", "restricted", "secure"]),
+  zoneType: z.enum(["entry", "exit", "general"]),
 });
 type ZoneFormValues = z.infer<typeof zoneSchema>;
 
@@ -53,15 +53,15 @@ function ZoneForm({ defaultValues, onSubmit, isPending, submitLabel }: {
             <FormMessage />
           </FormItem>
         )} />
-        <FormField control={form.control} name="accessLevel" render={({ field }) => (
+        <FormField control={form.control} name="zoneType" render={({ field }) => (
           <FormItem>
-            <FormLabel>Ниво на достъп</FormLabel>
+            <FormLabel>Тип зона</FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
-              <FormControl><SelectTrigger><SelectValue placeholder="Избери ниво" /></SelectTrigger></FormControl>
+              <FormControl><SelectTrigger><SelectValue placeholder="Избери тип" /></SelectTrigger></FormControl>
               <SelectContent>
-                <SelectItem value="public">Публичен</SelectItem>
-                <SelectItem value="restricted">Ограничен</SelectItem>
-                <SelectItem value="secure">Сигурен</SelectItem>
+                <SelectItem value="general">Обща (без турникет)</SelectItem>
+                <SelectItem value="entry">Вход — стартира работното време</SelectItem>
+                <SelectItem value="exit">Изход — приключва работното време</SelectItem>
               </SelectContent>
             </Select>
             <FormMessage />
@@ -138,12 +138,12 @@ export default function ZoneList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
-  const [editZone, setEditZone] = useState<{ id: number; name: string; description?: string | null; accessLevel: string } | null>(null);
+  const [editZone, setEditZone] = useState<{ id: number; name: string; description?: string | null; zoneType: string } | null>(null);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListZonesQueryKey() });
 
   function handleCreate(values: ZoneFormValues) {
-    createZone.mutate({ data: values }, {
+    createZone.mutate({ data: { ...values, accessLevel: "public" } }, {
       onSuccess: () => { toast({ title: "Зоната е създадена успешно" }); invalidate(); setCreateOpen(false); },
       onError: (err: any) => toast({ title: "Грешка", description: err.message, variant: "destructive" }),
     });
@@ -151,7 +151,7 @@ export default function ZoneList() {
 
   function handleEdit(values: ZoneFormValues) {
     if (!editZone) return;
-    updateZone.mutate({ id: editZone.id, data: values }, {
+    updateZone.mutate({ id: editZone.id, data: { ...values, accessLevel: "public" } }, {
       onSuccess: () => { toast({ title: "Зоната е актуализирана" }); invalidate(); setEditZone(null); },
       onError: (err: any) => toast({ title: "Грешка", description: err.message, variant: "destructive" }),
     });
@@ -177,7 +177,7 @@ export default function ZoneList() {
           <DialogContent>
             <DialogHeader><DialogTitle>Създаване на нова зона</DialogTitle></DialogHeader>
             <ZoneForm
-              defaultValues={{ name: "", description: "", accessLevel: "restricted" }}
+              defaultValues={{ name: "", description: "", zoneType: "general" }}
               onSubmit={handleCreate}
               isPending={createZone.isPending}
               submitLabel="Създай зона"
@@ -195,7 +195,7 @@ export default function ZoneList() {
               defaultValues={{
                 name: editZone.name,
                 description: editZone.description ?? "",
-                accessLevel: editZone.accessLevel as "public" | "restricted" | "secure",
+                zoneType: (editZone.zoneType ?? "general") as "entry" | "exit" | "general",
               }}
               onSubmit={handleEdit}
               isPending={updateZone.isPending}
@@ -211,7 +211,7 @@ export default function ZoneList() {
             <TableRow>
               <TableHead>Наименование</TableHead>
               <TableHead>Описание</TableHead>
-              <TableHead>Ниво на достъп</TableHead>
+              <TableHead>Тип (турникет)</TableHead>
               <TableHead className="text-center">Камери</TableHead>
               <TableHead className="text-right">Действия</TableHead>
             </TableRow>
@@ -229,7 +229,7 @@ export default function ZoneList() {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{zone.description || "—"}</TableCell>
-                  <TableCell><AccessLevelBadge level={zone.accessLevel} /></TableCell>
+                  <TableCell><ZoneTypeBadge type={zone.zoneType ?? "general"} /></TableCell>
                   <TableCell className="text-center font-mono text-muted-foreground">{zone.cameraCount || 0}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
@@ -238,7 +238,7 @@ export default function ZoneList() {
                       <Button
                         variant="ghost" size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => setEditZone({ id: zone.id, name: zone.name, description: zone.description, accessLevel: zone.accessLevel })}
+                        onClick={() => setEditZone({ id: zone.id, name: zone.name, description: zone.description, zoneType: zone.zoneType ?? "general" })}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -280,8 +280,8 @@ export default function ZoneList() {
   );
 }
 
-function AccessLevelBadge({ level }: { level: string }) {
-  if (level === "public")  return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20"><ShieldCheck className="h-3 w-3 mr-1" />ПУБЛИЧЕН</Badge>;
-  if (level === "secure")  return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20"><ShieldAlert className="h-3 w-3 mr-1" />СИГУРЕН</Badge>;
-  return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20"><Shield className="h-3 w-3 mr-1" />ОГРАНИЧЕН</Badge>;
+function ZoneTypeBadge({ type }: { type: string }) {
+  if (type === "entry") return <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20"><LogIn className="h-3 w-3 mr-1" />ВХОД</Badge>;
+  if (type === "exit")  return <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20"><LogOut className="h-3 w-3 mr-1" />ИЗХОД</Badge>;
+  return <Badge variant="outline" className="bg-muted text-muted-foreground"><LayoutGrid className="h-3 w-3 mr-1" />ОБЩА</Badge>;
 }
