@@ -17,8 +17,6 @@ services:
       MIN_FACE_SCORE: "${FACE_AI_MIN_SCORE:-0.5}"
     volumes:
       - faceguard-models:/root/.insightface
-    ports:
-      - "5000:5000"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\" 2>/dev/null"]
       interval: 10s
