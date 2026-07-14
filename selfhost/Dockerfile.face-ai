@@ -7,8 +7,12 @@
 
 FROM python:3.11-slim
 
-# System libs required by OpenCV headless
+# Build tools (gcc/g++) needed to compile InsightFace Cython extension,
+# plus runtime libs required by OpenCV headless.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    python3-dev \
     libgl1 \
     libglib2.0-0 \
     libsm6 \
