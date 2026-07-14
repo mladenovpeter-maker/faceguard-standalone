@@ -71,19 +71,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const isOnline = health?.status === "ok";
 
   const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
-    <div className="flex flex-col h-full bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]">
+    <div className="flex flex-col h-full bg-card border-r border-card-border">
 
       {/* Logo */}
-      <div className="h-16 flex items-center px-5 shrink-0 border-b border-[hsl(var(--sidebar-border))]">
+      <div className="h-[58px] flex items-center px-5 shrink-0 border-b border-card-border">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-9 w-9 rounded-xl bg-[hsl(var(--sidebar-primary))] flex items-center justify-center shrink-0 shadow-lg shadow-black/30">
-            <ShieldCheck className="h-5 w-5 text-[hsl(var(--sidebar-primary-foreground))]" strokeWidth={2.5} />
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-sm shadow-primary/25">
+            <ShieldCheck className="h-4 w-4 text-primary-foreground" strokeWidth={2.5} />
           </div>
           <div className="min-w-0">
-            <h1 className="font-display font-bold text-[15px] tracking-tight text-[hsl(var(--sidebar-accent-foreground))] leading-none">
+            <h1 className="font-display font-bold text-[14px] tracking-tight text-foreground leading-none">
               FaceGuard
             </h1>
-            <p className="text-[10px] font-mono text-[hsl(var(--sidebar-foreground))]/40 leading-none mt-1 tracking-widest uppercase">
+            <p className="text-[9px] font-mono text-muted-foreground leading-none mt-1 tracking-widest uppercase">
               Access Control
             </p>
           </div>
@@ -94,7 +94,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
         {navGroups.map((group) => (
           <div key={group.label}>
-            <p className="text-[10px] font-mono font-semibold tracking-[0.15em] uppercase px-3 mb-1.5 text-[hsl(var(--sidebar-foreground))]/35">
+            <p className="text-[10px] font-mono font-bold tracking-[0.14em] uppercase px-3 mb-1.5 text-muted-foreground/60">
               {group.label}
             </p>
             <div className="space-y-0.5">
@@ -107,17 +107,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <Link key={item.href} href={item.href}>
                     <div
                       className={cn(
-                        "relative flex items-center gap-3 px-3 py-2 text-sm rounded-lg cursor-pointer transition-all duration-150",
+                        "relative flex items-center gap-2.5 px-3 py-2 text-[13px] rounded-lg cursor-pointer transition-all duration-150",
                         isActive
-                          ? "bg-[hsl(var(--sidebar-primary))]/15 text-[hsl(var(--sidebar-primary))] font-semibold"
-                          : "text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-accent-foreground))] font-medium"
+                          ? "bg-accent text-sidebar-accent-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
                       )}
                       onClick={onNavigate}
                     >
                       {isActive && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-[hsl(var(--sidebar-primary))]" />
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary" />
                       )}
-                      <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[hsl(var(--sidebar-primary))]" : "")} strokeWidth={isActive ? 2.5 : 2} />
+                      <Icon
+                        className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "")}
+                        strokeWidth={isActive ? 2.5 : 2}
+                      />
                       <span className="truncate">{item.label}</span>
                     </div>
                   </Link>
@@ -129,34 +132,33 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Status footer */}
-      <div className="px-4 py-3 border-t border-[hsl(var(--sidebar-border))] shrink-0">
+      <div className="px-4 py-3 border-t border-card-border shrink-0 bg-muted/30">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {isOnline ? (
-              <Wifi className="h-3.5 w-3.5 text-emerald-400" />
-            ) : (
-              <WifiOff className="h-3.5 w-3.5 text-red-400" />
-            )}
+          <div className="flex items-center gap-1.5">
+            {isOnline
+              ? <Wifi className="h-3 w-3 text-emerald-500" />
+              : <WifiOff className="h-3 w-3 text-red-500" />
+            }
             <span className={cn(
-              "text-xs font-mono font-semibold tracking-wider",
-              !health ? "text-[hsl(var(--sidebar-foreground))]/40" :
-              isOnline ? "text-emerald-400" : "text-red-400"
+              "text-[10px] font-mono font-semibold tracking-wider",
+              !health ? "text-muted-foreground" :
+              isOnline ? "text-emerald-600" : "text-red-500"
             )}>
               {!health ? "ЗАРЕЖДАНЕ" : isOnline ? "ОНЛАЙН" : "ПРОБЛЕМ"}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Database className="h-3 w-3 text-[hsl(var(--sidebar-foreground))]/30" />
+          <div className="flex items-center gap-1">
+            <Database className="h-3 w-3 text-muted-foreground/50" />
             <span className={cn(
               "text-[10px] font-mono",
-              health?.db === "ok" ? "text-emerald-400/80" : "text-red-400"
+              health?.db === "ok" ? "text-emerald-600" : "text-red-500"
             )}>
-              {!health ? "—" : health.db === "ok" ? "БД ОК" : "БД ГРЕШКА"}
+              {!health ? "—" : health.db === "ok" ? "БД ОК" : "ГРЕШКА"}
             </span>
           </div>
         </div>
         {health?.uptimeSeconds !== undefined && (
-          <p className="text-[10px] font-mono text-[hsl(var(--sidebar-foreground))]/25 mt-1">
+          <p className="text-[10px] font-mono text-muted-foreground/40 mt-0.5">
             uptime {formatUptime(health.uptimeSeconds)}
           </p>
         )}
@@ -165,25 +167,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/20 selection:text-primary">
+    <div className="flex h-screen w-full bg-background overflow-hidden">
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-[240px] flex-col z-20 shrink-0 shadow-xl shadow-black/20">
+      <aside className="hidden md:flex w-[232px] flex-col z-20 shrink-0 shadow-sm">
         <SidebarContent />
       </aside>
 
       {/* Mobile sidebar drawer */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="p-0 w-[240px] flex flex-col border-0">
+        <SheetContent side="left" className="p-0 w-[232px] flex flex-col border-0">
           <SidebarContent onNavigate={() => setMobileOpen(false)} />
         </SheetContent>
       </Sheet>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Header */}
-        <header className="h-14 md:h-[58px] border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-3 md:px-6 shrink-0 justify-between gap-2">
+        <header className="h-[58px] border-b border-border bg-card flex items-center px-3 md:px-6 shrink-0 justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <Button
               variant="ghost"
@@ -207,7 +209,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-secondary transition-colors text-sm">
+              <button className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-muted transition-colors text-sm">
                 <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <UserCircle className="h-4 w-4 text-primary" />
                 </div>
@@ -241,7 +243,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page content */}
-        <div className="flex-1 overflow-y-auto p-3 md:p-5 lg:p-7">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
