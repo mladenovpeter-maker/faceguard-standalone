@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-zod";
 import { computeAllFaceDescriptorsAsync } from "../lib/face-recognition-pool";
 import { matchDescriptor, type FaceCandidate } from "../lib/face-recognition";
+import { saveSnapshot, SNAPSHOTS_DIR } from "../lib/snapshot-store";
 
 const router: IRouter = Router();
 
@@ -45,17 +46,98 @@ function markRecognized(cameraId: number, employeeId: number): void {
 
 /**
  * Upsert an attendance record for a recognized employee.
- * - First recognition of the day  → INSERT (firstSeen = lastSeen = detectedAt)
- * - Subsequent recognitions       → UPDATE lastSeen if newer, recalculate totalMinutes
- * - firstSeen is never moved forward (keeps the earliest arrival time)
+ *
+ * Turnstile mode (zone has zoneType = 'entry' or 'exit'):
+ *   - entry zone: sets clockInAt (keeps the earliest clock-in of the day)
+ *   - exit zone:  sets clockOutAt (keeps the latest clock-out of the day)
+ *   - totalMinutes = clockOutAt - clockInAt (when both are present)
+ *
+ * General / no-zone mode (zoneType = 'general' or null):
+ *   - falls back to firstSeen/lastSeen logic (original behaviour)
+ *   - totalMinutes = lastSeen - firstSeen
  */
 async function upsertAttendance(
   employeeId: number,
   zoneId: number | null,
+  zoneType: string | null,
   detectedAt: Date,
 ): Promise<void> {
-  const dateStr = detectedAt.toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const dateStr = detectedAt.toISOString().slice(0, 10);
+  const ts = detectedAt.toISOString();
 
+  if (zoneType === "entry") {
+    await db
+      .insert(attendanceTable)
+      .values({
+        employeeId,
+        date: dateStr,
+        firstSeen: detectedAt,
+        lastSeen: detectedAt,
+        clockInAt: detectedAt,
+        currentlyInside: true,
+        zoneId,
+        totalMinutes: 0,
+      })
+      .onConflictDoUpdate({
+        target: [attendanceTable.employeeId, attendanceTable.date],
+        set: {
+          // Keep earliest clock-in
+          clockInAt: sql`LEAST(COALESCE(${attendanceTable.clockInAt}, ${ts}::timestamptz), ${ts}::timestamptz)`,
+          // Mark as currently inside (re-entry after lunch break etc.)
+          currentlyInside: true,
+          // Recalculate totalMinutes if clockOut already recorded
+          totalMinutes: sql`CASE
+            WHEN ${attendanceTable.clockOutAt} IS NOT NULL
+            THEN EXTRACT(EPOCH FROM (
+              ${attendanceTable.clockOutAt} -
+              LEAST(COALESCE(${attendanceTable.clockInAt}, ${ts}::timestamptz), ${ts}::timestamptz)
+            ))::int / 60
+            ELSE ${attendanceTable.totalMinutes}
+          END`,
+          firstSeen: sql`LEAST(${attendanceTable.firstSeen}, ${ts}::timestamptz)`,
+          updatedAt: sql`NOW()`,
+        },
+      });
+    return;
+  }
+
+  if (zoneType === "exit") {
+    await db
+      .insert(attendanceTable)
+      .values({
+        employeeId,
+        date: dateStr,
+        firstSeen: detectedAt,
+        lastSeen: detectedAt,
+        clockOutAt: detectedAt,
+        currentlyInside: false,
+        zoneId,
+        totalMinutes: 0,
+      })
+      .onConflictDoUpdate({
+        target: [attendanceTable.employeeId, attendanceTable.date],
+        set: {
+          // Keep latest clock-out
+          clockOutAt: sql`GREATEST(COALESCE(${attendanceTable.clockOutAt}, ${ts}::timestamptz), ${ts}::timestamptz)`,
+          lastSeen: sql`GREATEST(${attendanceTable.lastSeen}, ${ts}::timestamptz)`,
+          // Mark as not currently inside
+          currentlyInside: false,
+          // Recalculate totalMinutes if clockIn already recorded
+          totalMinutes: sql`CASE
+            WHEN ${attendanceTable.clockInAt} IS NOT NULL
+            THEN EXTRACT(EPOCH FROM (
+              GREATEST(COALESCE(${attendanceTable.clockOutAt}, ${ts}::timestamptz), ${ts}::timestamptz) -
+              ${attendanceTable.clockInAt}
+            ))::int / 60
+            ELSE ${attendanceTable.totalMinutes}
+          END`,
+          updatedAt: sql`NOW()`,
+        },
+      });
+    return;
+  }
+
+  // General / no-zone fallback: classic firstSeen/lastSeen
   await db
     .insert(attendanceTable)
     .values({
@@ -69,13 +151,11 @@ async function upsertAttendance(
     .onConflictDoUpdate({
       target: [attendanceTable.employeeId, attendanceTable.date],
       set: {
-        // Only extend lastSeen forward in time
-        lastSeen: sql`GREATEST(${attendanceTable.lastSeen}, ${detectedAt.toISOString()})`,
-        // Only move firstSeen backward in time (edge case: out-of-order events)
-        firstSeen: sql`LEAST(${attendanceTable.firstSeen}, ${detectedAt.toISOString()})`,
+        lastSeen: sql`GREATEST(${attendanceTable.lastSeen}, ${ts}::timestamptz)`,
+        firstSeen: sql`LEAST(${attendanceTable.firstSeen}, ${ts}::timestamptz)`,
         totalMinutes: sql`EXTRACT(EPOCH FROM (
-          GREATEST(${attendanceTable.lastSeen}, ${detectedAt.toISOString()}) -
-          LEAST(${attendanceTable.firstSeen}, ${detectedAt.toISOString()})
+          GREATEST(${attendanceTable.lastSeen}, ${ts}::timestamptz) -
+          LEAST(${attendanceTable.firstSeen}, ${ts}::timestamptz)
         ))::int / 60`,
         updatedAt: sql`NOW()`,
       },
@@ -162,13 +242,23 @@ router.post("/recognitions", async (req, res): Promise<void> => {
         .filter((p) => p.faceDescriptor)
         .map((p) => ({ employeeId: p.employeeId, descriptor: p.faceDescriptor as number[] }));
 
-      const snapshotUrl = parsed.data.snapshotUrl ?? parsed.data.snapshotBase64 ?? null;
       const detectedAt = new Date(parsed.data.detectedAt);
+      const snapshotUrl = await saveSnapshot(
+        parsed.data.snapshotUrl ?? parsed.data.snapshotBase64 ?? null,
+        detectedAt,
+      ).catch((err: unknown) => {
+        req.log.error({ err, snapshotsDir: SNAPSHOTS_DIR }, "saveSnapshot failed — check Docker volume mount at /app/snapshots");
+        return null;
+      });
 
-      // Fetch camera zone once — needed for attendance records.
-      const [cam] = await db.select({ zoneId: camerasTable.zoneId })
-        .from(camerasTable).where(eq(camerasTable.id, parsed.data.cameraId));
-      const camZoneId = cam?.zoneId ?? null;
+      // Fetch camera zone (and zone type) once — needed for attendance records.
+      const [cam] = await db
+        .select({ zoneId: camerasTable.zoneId, zoneType: zonesTable.zoneType })
+        .from(camerasTable)
+        .leftJoin(zonesTable, eq(zonesTable.id, camerasTable.zoneId))
+        .where(eq(camerasTable.id, parsed.data.cameraId));
+      const camZoneId   = cam?.zoneId   ?? null;
+      const camZoneType = cam?.zoneType ?? null;
 
       const cameraId = parsed.data.cameraId;
       const eventsToInsert = descriptors.map((descriptor) => ({
@@ -182,8 +272,8 @@ router.post("/recognitions", async (req, res): Promise<void> => {
         await Promise.all(
           eventsToInsert.map(async ({ descriptor: _d, match }) => {
             if (match) {
-              // Always update attendance so lastSeen stays current.
-              await upsertAttendance(match.employeeId, camZoneId, detectedAt).catch((e) =>
+              // Always update attendance so lastSeen/clockIn/clockOut stays current.
+              await upsertAttendance(match.employeeId, camZoneId, camZoneType, detectedAt).catch((e) =>
                 req.log.warn({ err: e, employeeId: match.employeeId }, "Attendance upsert failed"),
               );
               if (recognizedCoolingDown(cameraId, match.employeeId)) {
@@ -248,8 +338,11 @@ router.post("/recognitions", async (req, res): Promise<void> => {
   }
 
   // Non-AI path: camera already decided status (recognized / denied) — trust it.
-  const snapshotUrl = parsed.data.snapshotUrl ?? null;
   const detectedAtNonAi = new Date(parsed.data.detectedAt);
+  const snapshotUrl = await saveSnapshot(parsed.data.snapshotUrl ?? null, detectedAtNonAi).catch((err: unknown) => {
+    req.log.error({ err, snapshotsDir: SNAPSHOTS_DIR }, "saveSnapshot failed — check Docker volume mount at /app/snapshots");
+    return null;
+  });
   const [event] = await db.insert(recognitionEventsTable).values({
     cameraId: parsed.data.cameraId,
     employeeId: parsed.data.employeeId ?? null,
@@ -259,14 +352,18 @@ router.post("/recognitions", async (req, res): Promise<void> => {
     detectedAt: detectedAtNonAi,
   }).returning();
 
-  const [camera] = await db.select({ name: camerasTable.name, zoneId: camerasTable.zoneId })
-    .from(camerasTable).where(eq(camerasTable.id, event.cameraId));
+  const [camera] = await db
+    .select({ name: camerasTable.name, zoneId: camerasTable.zoneId, zoneType: zonesTable.zoneType })
+    .from(camerasTable)
+    .leftJoin(zonesTable, eq(zonesTable.id, camerasTable.zoneId))
+    .where(eq(camerasTable.id, event.cameraId));
 
-  const zoneId = camera?.zoneId ?? null;
+  const zoneId   = camera?.zoneId   ?? null;
+  const zoneType = camera?.zoneType ?? null;
 
   // Sync attendance when the camera itself confirmed recognition.
   if (event.status === "recognized" && event.employeeId) {
-    await upsertAttendance(event.employeeId, zoneId, detectedAtNonAi).catch((e) =>
+    await upsertAttendance(event.employeeId, zoneId, zoneType, detectedAtNonAi).catch((e) =>
       req.log.warn({ err: e, employeeId: event.employeeId }, "Attendance upsert failed"),
     );
   }
