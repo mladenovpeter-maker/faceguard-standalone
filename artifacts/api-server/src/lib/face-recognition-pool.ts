@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import { logger } from "./logger.js";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const WORKER_PATH = path.resolve(currentDir, "face-recognition-worker.mjs");
+const WORKER_PATH = path.resolve(currentDir, "lib/face-recognition-worker.mjs");
 
 type Pending = {
   resolve: (descriptor: number[] | null) => void;
