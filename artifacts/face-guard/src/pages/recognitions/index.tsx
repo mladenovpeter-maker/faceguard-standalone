@@ -15,6 +15,19 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
+/* ── SnapshotImage: показва placeholder ако снимката не може да се зареди ── */
+function SnapshotImage({ src, className, onClick }: { src: string; className: string; onClick?: () => void }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) {
+    return (
+      <div className={`bg-muted flex items-center justify-center ${className}`} onClick={onClick}>
+        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+      </div>
+    );
+  }
+  return <img src={src} alt="snapshot" className={className} onError={() => setBroken(true)} onClick={onClick} />;
+}
+
 /* ── helpers ── */
 const TYPE_LABELS: Record<string, string> = {
   supplier: "Доставчик",
@@ -101,7 +114,7 @@ function RegisterVisitorModal({
         {/* snapshot + event info */}
         <div className="flex gap-3 items-start bg-muted/40 rounded-lg p-3 border">
           {event.snapshotUrl ? (
-            <img src={event.snapshotUrl} alt="snapshot" className="w-20 h-20 rounded object-cover border shrink-0" />
+            <SnapshotImage src={event.snapshotUrl} className="w-20 h-20 rounded object-cover border shrink-0" />
           ) : (
             <div className="w-20 h-20 rounded bg-muted flex items-center justify-center border shrink-0">
               <ImageIcon className="h-6 w-6 text-muted-foreground" />
@@ -275,7 +288,7 @@ export default function RecognitionList() {
                         onClick={() => setPreviewUrl(event.snapshotUrl!)}
                         title="Увеличи снимката"
                       >
-                        <img src={event.snapshotUrl} alt="snapshot" className="h-full w-full object-cover" />
+                        <SnapshotImage src={event.snapshotUrl} className="h-full w-full object-cover" onClick={() => setPreviewUrl(event.snapshotUrl!)} />
                       </div>
                     ) : (
                       <div className="h-10 w-10 bg-muted rounded-md border border-border flex items-center justify-center">
