@@ -215,22 +215,22 @@ export default function RecognitionList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Лог на събития</h1>
+          <h1 className="text-2xl font-display font-bold tracking-tight text-foreground">Лог на събития</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Непознатите лица могат да бъдат регистрирани директно като посетители
           </p>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-center bg-card p-4 rounded-lg border border-border">
+      <div className="flex flex-col sm:flex-row gap-3 items-center bg-card p-3.5 rounded-xl border border-card-border shadow-sm">
         <div className="relative flex-1 w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Търсене на събития..." className="pl-9 font-mono bg-background" />
+          <Input placeholder="Търсене на събития..." className="pl-9 bg-background rounded-lg" />
         </div>
         <Select value={status} onValueChange={(v: any) => setStatus(v)}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-[200px] rounded-lg">
             <SelectValue placeholder="Филтър по статус" />
           </SelectTrigger>
           <SelectContent>
@@ -242,18 +242,18 @@ export default function RecognitionList() {
         </Select>
       </div>
 
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
+      <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
         <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow>
-              <TableHead className="w-[80px]">Снимка</TableHead>
-              <TableHead>Дата и час</TableHead>
-              <TableHead>Статус</TableHead>
-              <TableHead>Лице</TableHead>
-              <TableHead>Точност</TableHead>
-              <TableHead>Камера</TableHead>
-              <TableHead>Зона</TableHead>
-              <TableHead className="w-[60px]" />
+          <TableHeader>
+            <TableRow className="bg-muted/60 hover:bg-muted/60">
+              <TableHead className="w-[72px] text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Снимка</TableHead>
+              <TableHead className="text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Дата и час</TableHead>
+              <TableHead className="text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Статус</TableHead>
+              <TableHead className="text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Лице</TableHead>
+              <TableHead className="text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Точност</TableHead>
+              <TableHead className="text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Камера</TableHead>
+              <TableHead className="text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Зона</TableHead>
+              <TableHead className="w-[90px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
