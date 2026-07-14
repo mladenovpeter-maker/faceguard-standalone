@@ -29,8 +29,9 @@ function formatHours(minutes: number | null | undefined): string {
   return m > 0 ? `${h}ч ${m}м` : `${h}ч`;
 }
 
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00Z");
+function formatDate(dateVal: string | Date): string {
+  const d = dateVal instanceof Date ? dateVal : new Date(dateVal + "T12:00:00Z");
+  if (isNaN(d.getTime())) return String(dateVal);
   return `${BG_WEEKDAYS[d.getUTCDay()]}, ${String(d.getUTCDate()).padStart(2, "0")}.${String(d.getUTCMonth() + 1).padStart(2, "0")}.${d.getUTCFullYear()}`;
 }
 
