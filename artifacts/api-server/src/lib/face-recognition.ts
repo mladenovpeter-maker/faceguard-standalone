@@ -44,7 +44,9 @@ const MODELS_DIR = ((): string => {
 
 // Minimum descriptor distance to consider two faces a match (lower = stricter).
 // face-api's Euclidean distance: <0.6 is a widely used threshold for the same person.
-export const FACE_MATCH_THRESHOLD = 0.55;
+// 0.65 gives better results when the camera angle differs from the enrolled photos
+// (e.g. ceiling-mounted camera vs frontal enrollment photos).
+export const FACE_MATCH_THRESHOLD = 0.65;
 
 let modelsLoaded = false;
 let modelsLoadingPromise: Promise<void> | null = null;
