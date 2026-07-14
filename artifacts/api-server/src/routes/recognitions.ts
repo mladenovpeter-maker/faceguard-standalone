@@ -12,6 +12,37 @@ import { matchDescriptor, type FaceCandidate } from "../lib/face-recognition";
 
 const router: IRouter = Router();
 
+// ── Event cooldown ──────────────────────────────────────────────────────────
+// Prevents spam from a static camera polling the same scene every 5 seconds.
+//
+// unknownCooldownMs  — min gap between two "unknown" events from the same camera.
+//   Default 3 min. Set UNKNOWN_EVENT_COOLDOWN_SECONDS in .env to override.
+// recognizedCooldownMs — min gap between two "recognized" events for the same
+//   employee+camera pair. Attendance is still updated on every recognition;
+//   only the log entry is suppressed. Default 5 min.
+//   Set RECOGNIZED_EVENT_COOLDOWN_SECONDS in .env to override.
+const UNKNOWN_COOLDOWN_MS = Number(process.env.UNKNOWN_EVENT_COOLDOWN_SECONDS ?? 180) * 1000;
+const RECOGNIZED_COOLDOWN_MS = Number(process.env.RECOGNIZED_EVENT_COOLDOWN_SECONDS ?? 300) * 1000;
+
+// cameraId → last unknown event timestamp
+const lastUnknownAt = new Map<number, number>();
+// `${cameraId}-${employeeId}` → last recognized event timestamp
+const lastRecognizedAt = new Map<string, number>();
+
+function unknownCoolingDown(cameraId: number): boolean {
+  const last = lastUnknownAt.get(cameraId);
+  return last !== undefined && Date.now() - last < UNKNOWN_COOLDOWN_MS;
+}
+function recognizedCoolingDown(cameraId: number, employeeId: number): boolean {
+  const last = lastRecognizedAt.get(`${cameraId}-${employeeId}`);
+  return last !== undefined && Date.now() - last < RECOGNIZED_COOLDOWN_MS;
+}
+function markUnknown(cameraId: number): void { lastUnknownAt.set(cameraId, Date.now()); }
+function markRecognized(cameraId: number, employeeId: number): void {
+  lastRecognizedAt.set(`${cameraId}-${employeeId}`, Date.now());
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 /**
  * Upsert an attendance record for a recognized employee.
  * - First recognition of the day  → INSERT (firstSeen = lastSeen = detectedAt)
@@ -139,37 +170,62 @@ router.post("/recognitions", async (req, res): Promise<void> => {
         .from(camerasTable).where(eq(camerasTable.id, parsed.data.cameraId));
       const camZoneId = cam?.zoneId ?? null;
 
-      const insertedEvents = await Promise.all(
-        descriptors.map(async (descriptor) => {
-          const match = matchDescriptor(descriptor, candidates);
-          const [evt] = await db.insert(recognitionEventsTable).values({
-            cameraId: parsed.data.cameraId,
-            employeeId: match ? match.employeeId : null,
-            status: match ? "recognized" : "unknown",
-            confidence: match ? match.confidence / 100 : 0,
-            snapshotUrl,
-            detectedAt,
-          }).returning();
-          req.log.info(
-            match
-              ? { employeeId: match.employeeId, distance: match.distance }
-              : {},
-            match ? "AI fallback matched a face" : "AI fallback: face detected but no match",
-          );
-          // Keep attendance in sync for recognized employees.
-          if (match) {
-            await upsertAttendance(match.employeeId, camZoneId, detectedAt).catch((e) =>
-              req.log.warn({ err: e, employeeId: match.employeeId }, "Attendance upsert failed"),
-            );
-          }
-          return evt;
-        }),
-      );
+      const cameraId = parsed.data.cameraId;
+      const eventsToInsert = descriptors.map((descriptor) => ({
+        descriptor,
+        match: matchDescriptor(descriptor, candidates),
+      }));
 
-      req.log.info({ count: insertedEvents.length }, "Group frame processed");
+      // Apply cooldown: suppress creating a new log entry if the same face/camera
+      // was seen too recently. Attendance is ALWAYS updated regardless.
+      const insertedEvents = (
+        await Promise.all(
+          eventsToInsert.map(async ({ descriptor: _d, match }) => {
+            if (match) {
+              // Always update attendance so lastSeen stays current.
+              await upsertAttendance(match.employeeId, camZoneId, detectedAt).catch((e) =>
+                req.log.warn({ err: e, employeeId: match.employeeId }, "Attendance upsert failed"),
+              );
+              if (recognizedCoolingDown(cameraId, match.employeeId)) {
+                req.log.info({ employeeId: match.employeeId, cameraId }, "Recognized — cooldown active, skipping event");
+                return null;
+              }
+              markRecognized(cameraId, match.employeeId);
+            } else {
+              if (unknownCoolingDown(cameraId)) {
+                req.log.info({ cameraId }, "Unknown face — cooldown active, skipping event");
+                return null;
+              }
+              markUnknown(cameraId);
+            }
+
+            const [evt] = await db.insert(recognitionEventsTable).values({
+              cameraId,
+              employeeId: match ? match.employeeId : null,
+              status: match ? "recognized" : "unknown",
+              confidence: match ? match.confidence / 100 : 0,
+              snapshotUrl,
+              detectedAt,
+            }).returning();
+            req.log.info(
+              match ? { employeeId: match.employeeId, distance: match.distance } : {},
+              match ? "AI fallback matched a face" : "AI fallback: face detected but no match",
+            );
+            return evt;
+          }),
+        )
+      ).filter(Boolean);
+
+      req.log.info({ descriptorCount: descriptors.length, insertedCount: insertedEvents.length }, "Group frame processed");
+
+      // All events were suppressed by cooldown — no new log entries needed.
+      if (insertedEvents.length === 0) {
+        res.status(204).end();
+        return;
+      }
 
       // Respond with the first event (API contract unchanged; worker only needs 201 vs 204).
-      const firstEvent = insertedEvents[0];
+      const firstEvent = insertedEvents[0]!;
       const [camera] = await db.select({ name: camerasTable.name, zoneId: camerasTable.zoneId })
         .from(camerasTable).where(eq(camerasTable.id, firstEvent.cameraId));
       const zoneId = camera?.zoneId ?? null;
