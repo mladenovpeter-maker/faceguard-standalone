@@ -71,11 +71,12 @@ async function ensureModelsLoaded(): Promise<void> {
 }
 
 /**
- * Tries to detect a face using SsdMobilenetv1 at progressively lower confidence
- * thresholds, then falls back to TinyFaceDetector if SSD finds nothing.
- * Returns null only if no face is found by any method.
+ * Detects ALL faces in a frame using SsdMobilenetv1, falling back to
+ * TinyFaceDetector if SSD finds nothing.
+ * Returns an array of face descriptors — one per detected person.
+ * Returns an empty array when no faces are found.
  */
-export async function computeFaceDescriptor(imageBuffer: Buffer): Promise<number[] | null> {
+export async function computeAllFaceDescriptors(imageBuffer: Buffer): Promise<number[][]> {
   await ensureModelsLoaded();
   const image = await canvasLib.loadImage(imageBuffer);
   logger.info({ width: image.width, height: image.height, bufLen: imageBuffer.length }, "Image loaded for detection");
@@ -85,34 +86,39 @@ export async function computeFaceDescriptor(imageBuffer: Buffer): Promise<number
   const ctx = canvas.getContext("2d");
   ctx.drawImage(image, 0, 0);
 
-  // --- Primary: SsdMobilenetv1 ---
-  // 0.3 threshold works well for real cameras at 2–5 m distance.
-  const ssdDet = await faceapi
-    .detectSingleFace(canvas as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
+  // --- Primary: SsdMobilenetv1 — detectAllFaces handles groups ---
+  const ssdDets = await faceapi
+    .detectAllFaces(canvas as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
     .withFaceLandmarks()
-    .withFaceDescriptor();
-  if (ssdDet) {
-    logger.info({ detector: "ssd", score: ssdDet.detection.score }, "Face detected");
-    return Array.from(ssdDet.descriptor);
+    .withFaceDescriptors();
+  if (ssdDets.length > 0) {
+    logger.info({ detector: "ssd", count: ssdDets.length }, "Faces detected");
+    return ssdDets.map((d) => Array.from(d.descriptor));
   }
 
-  // --- Secondary: TinyFaceDetector (two sizes only — keeps miss latency low) ---
-  for (const inputSize of [320, 416]) {
-    const det = await faceapi
-      .detectSingleFace(
+  // --- Secondary: TinyFaceDetector (two sizes) ---
+  for (const inputSize of [320, 416] as const) {
+    const dets = await faceapi
+      .detectAllFaces(
         canvas as unknown as faceapi.TNetInput,
         new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.3 }),
       )
       .withFaceLandmarks()
-      .withFaceDescriptor();
-    if (det) {
-      logger.info({ detector: "tiny", inputSize, score: det.detection.score }, "Face detected");
-      return Array.from(det.descriptor);
+      .withFaceDescriptors();
+    if (dets.length > 0) {
+      logger.info({ detector: "tiny", inputSize, count: dets.length }, "Faces detected");
+      return dets.map((d) => Array.from(d.descriptor));
     }
   }
 
-  logger.warn({ width: image.width, height: image.height }, "No face detected by any method");
-  return null;
+  logger.warn({ width: image.width, height: image.height }, "No faces detected by any method");
+  return [];
+}
+
+/** @deprecated Use computeAllFaceDescriptors — kept for backward compat */
+export async function computeFaceDescriptor(imageBuffer: Buffer): Promise<number[] | null> {
+  const all = await computeAllFaceDescriptors(imageBuffer);
+  return all.length > 0 ? all[0] : null;
 }
 
 function euclideanDistance(a: number[], b: number[]): number {

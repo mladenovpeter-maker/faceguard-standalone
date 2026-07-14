@@ -11,7 +11,7 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_PATH = path.resolve(currentDir, "lib/face-recognition-worker.mjs");
 
 type Pending = {
-  resolve: (descriptor: number[] | null) => void;
+  resolve: (descriptors: number[][]) => void;
   reject: (err: Error) => void;
 };
 
@@ -22,14 +22,14 @@ let nextId = 0;
 function spawnWorker(): Worker {
   const w = new Worker(WORKER_PATH);
 
-  w.on("message", (msg: { id: number; descriptor?: number[] | null; error?: string }) => {
+  w.on("message", (msg: { id: number; descriptors?: number[][]; error?: string }) => {
     const p = pending.get(msg.id);
     if (!p) return;
     pending.delete(msg.id);
     if (msg.error) {
       p.reject(new Error(msg.error));
     } else {
-      p.resolve(msg.descriptor ?? null);
+      p.resolve(msg.descriptors ?? []);
     }
   });
 
@@ -58,14 +58,21 @@ function getWorker(): Worker {
 }
 
 /**
- * Run face detection + recognition in a worker thread.
+ * Run face detection for ALL faces in a frame, in a worker thread.
+ * Returns an array of descriptors — one per detected face (may be empty).
  * Never blocks the caller's event loop.
  */
-export async function computeFaceDescriptorAsync(imageBuffer: Buffer): Promise<number[] | null> {
-  return new Promise<number[] | null>((resolve, reject) => {
+export async function computeAllFaceDescriptorsAsync(imageBuffer: Buffer): Promise<number[][]> {
+  return new Promise<number[][]>((resolve, reject) => {
     const id = nextId++;
     pending.set(id, { resolve, reject });
     const copy = Buffer.from(imageBuffer);
     getWorker().postMessage({ id, imageBuffer: copy.buffer }, [copy.buffer]);
   });
+}
+
+/** @deprecated Use computeAllFaceDescriptorsAsync */
+export async function computeFaceDescriptorAsync(imageBuffer: Buffer): Promise<number[] | null> {
+  const all = await computeAllFaceDescriptorsAsync(imageBuffer);
+  return all.length > 0 ? all[0] : null;
 }
