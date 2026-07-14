@@ -59,6 +59,7 @@ services:
       FACE_MATCH_THRESHOLD: "${FACE_MATCH_THRESHOLD:-0.40}"
     volumes:
       - faceguard-uploads:/app/artifacts/api-server/uploads
+      - faceguard-snapshots:/app/snapshots
     ports:
       - "8080:8080"
 
@@ -88,6 +89,17 @@ services:
     ports:
       - "8081:80"
 
+  mcp-server:
+    build:
+      context: ..
+      dockerfile: selfhost/Dockerfile.mcp-server
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${REPO_PATH:-/home/tmm/faceguard-standalone}:/workspace
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
@@ -98,4 +110,5 @@ services:
 volumes:
   faceguard-db-data:
   faceguard-uploads:
+  faceguard-snapshots:
   faceguard-models:
