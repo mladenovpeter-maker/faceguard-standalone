@@ -13,16 +13,44 @@ your home server never needs).
 ## What you get
 
 - `postgres` — the database.
-- `api-server` — the Express API + internal AI face recognition (same code
-  as on Replit).
-- `camera-worker` — **new**: a small process that connects to your IP
-  camera(s) (RTSP or HTTP snapshot URLs), grabs a frame every few seconds,
-  and submits it to the recognition pipeline exactly like a real camera
-  integration would. This is the piece that didn't exist before — Replit's
-  environment can't reach your home cameras, so this worker only makes sense
-  running on your own network.
+- `face-ai` — **InsightFace AI microservice**: Python + FastAPI service that
+  runs the `buffalo_l` model pack (RetinaFace detector + ArcFace 512-dim
+  embeddings). Dramatically more accurate than the old face-api.js/TF.js
+  pipeline, especially for overhead/angled cameras. The Node.js API calls it
+  over HTTP — no Python code touches the rest of the stack.
+- `api-server` — the Express API, which calls `face-ai` for all recognition.
+- `camera-worker` — a small process that connects to your IP camera(s)
+  (RTSP or HTTP snapshot URLs), grabs a frame every few seconds, and submits
+  it to the recognition pipeline. Replit can't reach your home cameras, so
+  this worker only makes sense running on your own network.
 - `face-guard` — the web UI, served by nginx, which also proxies `/api/*`
   to the API server (mirrors how Replit's shared proxy routes requests).
+
+## ⚠️ After the first deploy — re-enroll employee faces
+
+The InsightFace ArcFace model produces 512-dimensional embeddings.  The old
+face-api.js model produced 128-dimensional ones.  **They are incompatible.**
+After the stack is up and all employees' photo files are intact, call:
+
+```bash
+curl -X POST http://localhost:8080/api/employees/reprocess-all \
+  -H "Authorization: Bearer <your-token>"
+```
+
+This reprocesses every enrolled photo through the new model and updates the
+stored descriptors.  Walk in front of the camera afterwards — recognition
+should be noticeably better.
+
+### Recognition threshold
+
+The default cosine-similarity threshold is **0.40** (range 0–1, higher =
+stricter). Tune it in `selfhost/.env` if needed:
+
+```env
+FACE_MATCH_THRESHOLD=0.40   # default — good for frontal + moderate angles
+# FACE_MATCH_THRESHOLD=0.35 # relaxed — better for ceiling cameras
+# FACE_MATCH_THRESHOLD=0.45 # strict  — fewer false positives
+```
 
 ## Prerequisites
 
@@ -51,9 +79,10 @@ From the repo root:
 docker compose -f selfhost/docker-compose.yml --env-file selfhost/.env up --build
 ```
 
-This builds and starts all four services. First boot takes a few minutes
-(installs dependencies, builds the frontend, downloads the face-recognition
-models bundled in the repo).
+This builds and starts all five services. **First boot takes longer than
+usual** (5–10 min) because the `face-ai` container downloads the InsightFace
+`buffalo_l` model weights (~300 MB) on its first startup. Subsequent starts
+are instant — the weights are stored in the `faceguard-models` Docker volume.
 
 ## 3. Create the database schema
 

@@ -7,6 +7,25 @@
 # See selfhost/README.md for full setup instructions.
 
 services:
+  face-ai:
+    build:
+      context: ..
+      dockerfile: selfhost/Dockerfile.face-ai
+    restart: unless-stopped
+    environment:
+      DET_SIZE: "${FACE_AI_DET_SIZE:-640}"
+      MIN_FACE_SCORE: "${FACE_AI_MIN_SCORE:-0.5}"
+    volumes:
+      - faceguard-models:/root/.insightface
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\" 2>/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -32,10 +51,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      face-ai:
+        condition: service_healthy
     environment:
       PORT: "8080"
       NODE_ENV: production
       DATABASE_URL: postgres://faceguard:${POSTGRES_PASSWORD:-faceguard}@postgres:5432/faceguard
+      FACE_AI_URL: http://face-ai:5000
+      FACE_MATCH_THRESHOLD: "${FACE_MATCH_THRESHOLD:-0.40}"
     volumes:
       - faceguard-uploads:/app/artifacts/api-server/uploads
     ports:
@@ -54,6 +77,7 @@ services:
       CAMERA_WORKER_USERNAME: ${CAMERA_WORKER_USERNAME:-admin}
       CAMERA_WORKER_PASSWORD: ${CAMERA_WORKER_PASSWORD}
       CAMERA_WORKER_POLL_INTERVAL_MS: ${CAMERA_WORKER_POLL_INTERVAL_MS:-5000}
+      FACE_AI_URL: http://face-ai:5000
     command: ["node", "--enable-source-maps", "dist/worker/camera-ingest.mjs"]
 
   face-guard:
@@ -76,3 +100,4 @@ services:
 volumes:
   faceguard-db-data:
   faceguard-uploads:
+  faceguard-models:

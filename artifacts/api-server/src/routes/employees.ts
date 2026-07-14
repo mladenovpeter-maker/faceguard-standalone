@@ -371,6 +371,42 @@ router.post("/employees/:id/photos/reprocess", async (req, res): Promise<void> =
   res.json({ total: updated, found });
 });
 
+// Bulk reprocess — re-compute face descriptors for ALL photos of ALL employees.
+// Useful after migrating to a new recognition engine (e.g. InsightFace).
+router.post("/employees/reprocess-all", async (req, res): Promise<void> => {
+  const allPhotos = await db.select().from(employeePhotosTable);
+
+  let total = 0;
+  let found = 0;
+  let missing = 0;
+
+  for (const photo of allPhotos) {
+    total++;
+    const photoFilename = photo.photoUrl.split("/").pop()!;
+    const filePath = path.join(photosDir, photoFilename);
+    if (!fs.existsSync(filePath)) { missing++; continue; }
+
+    const buffer = fs.readFileSync(filePath);
+    let descriptor: number[] | null = null;
+    try {
+      descriptor = await computeFaceDescriptor(buffer);
+    } catch (err) {
+      req.log.warn({ err, photoId: photo.id }, "reprocess-all: descriptor failed");
+    }
+
+    if (descriptor !== null) {
+      await db
+        .update(employeePhotosTable)
+        .set({ faceDescriptor: descriptor })
+        .where(eq(employeePhotosTable.id, photo.id));
+      found++;
+    }
+  }
+
+  req.log.info({ total, found, missing }, "reprocess-all complete");
+  res.json({ total, found, missing });
+});
+
 router.delete("/employees/:id/photos/:photoId", async (req, res): Promise<void> => {
   const params = DeleteEmployeePhotoParams.safeParse(req.params);
   if (!params.success) {

@@ -1,0 +1,30 @@
+# FaceGuard AI microservice — InsightFace + ArcFace buffalo_l model
+# Build from the REPO ROOT (compose sets context: ..):
+#   docker build -f selfhost/Dockerfile.face-ai -t faceguard-face-ai .
+#
+# The buffalo_l model weights (~300 MB) are downloaded to a Docker volume on
+# first startup and cached there. Subsequent startups are instant.
+
+FROM python:3.11-slim
+
+# System libs required by OpenCV headless
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY selfhost/face-ai/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY selfhost/face-ai/app.py ./
+
+EXPOSE 5000
+
+# Models are stored in /root/.insightface — mount a volume there so they
+# persist across container rebuilds (see docker-compose.yml).
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000"]
