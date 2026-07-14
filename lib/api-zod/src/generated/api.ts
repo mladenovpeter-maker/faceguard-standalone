@@ -360,19 +360,7 @@ export const TestCameraConnectionResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
   "latencyMs": zod.number().nullish(),
-  "snapshotBase64": zod.string().nullish()
-})
-
-
-/**
- * @summary Capture a still frame from a camera (used for employee photo enrollment)
- */
-export const CaptureCameraFrameParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const CaptureCameraFrameResponse = zod.object({
-  "snapshotBase64": zod.string()
+  "snapshotBase64": zod.string().nullish().describe('Base64-encoded JPEG snapshot from the camera (data:image\/jpeg;base64,...)')
 })
 
 
@@ -384,6 +372,7 @@ export const ListZonesResponseItem = zod.object({
   "name": zod.string(),
   "description": zod.string().nullish(),
   "accessLevel": zod.enum(['public', 'restricted', 'secure']),
+  "zoneType": zod.enum(['entry', 'exit', 'general']),
   "cameraCount": zod.number().optional(),
   "createdAt": zod.coerce.date()
 })
@@ -399,7 +388,8 @@ export const ListZonesResponse = zod.array(ListZonesResponseItem)
 export const CreateZoneBody = zod.object({
   "name": zod.string().min(1),
   "description": zod.string().optional(),
-  "accessLevel": zod.enum(['public', 'restricted', 'secure'])
+  "accessLevel": zod.enum(['public', 'restricted', 'secure']),
+  "zoneType": zod.enum(['entry', 'exit', 'general']).optional()
 })
 
 export const CreateZoneResponse = zod.object({
@@ -407,6 +397,7 @@ export const CreateZoneResponse = zod.object({
   "name": zod.string(),
   "description": zod.string().nullish(),
   "accessLevel": zod.enum(['public', 'restricted', 'secure']),
+  "zoneType": zod.enum(['entry', 'exit', 'general']),
   "cameraCount": zod.number().optional(),
   "createdAt": zod.coerce.date()
 })
@@ -422,7 +413,8 @@ export const UpdateZoneParams = zod.object({
 export const UpdateZoneBody = zod.object({
   "name": zod.string().optional(),
   "description": zod.string().nullish(),
-  "accessLevel": zod.enum(['public', 'restricted', 'secure']).optional()
+  "accessLevel": zod.enum(['public', 'restricted', 'secure']).optional(),
+  "zoneType": zod.enum(['entry', 'exit', 'general']).optional()
 })
 
 export const UpdateZoneResponse = zod.object({
@@ -430,6 +422,7 @@ export const UpdateZoneResponse = zod.object({
   "name": zod.string(),
   "description": zod.string().nullish(),
   "accessLevel": zod.enum(['public', 'restricted', 'secure']),
+  "zoneType": zod.enum(['entry', 'exit', 'general']),
   "cameraCount": zod.number().optional(),
   "createdAt": zod.coerce.date()
 })
@@ -557,11 +550,11 @@ export const CreateRecognitionResponse = zod.object({
  */
 export const ListAttendanceQueryParams = zod.object({
   "date": zod.date().optional(),
-  "from": zod.string().optional(),
-  "to": zod.string().optional(),
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
+  "departmentId": zod.coerce.number().nullish(),
   "employeeId": zod.coerce.number().nullish(),
-  "zoneId": zod.coerce.number().nullish(),
-  "departmentId": zod.coerce.number().nullish()
+  "zoneId": zod.coerce.number().nullish()
 })
 
 export const ListAttendanceResponseItem = zod.object({
@@ -574,10 +567,12 @@ export const ListAttendanceResponseItem = zod.object({
   "date": zod.coerce.date(),
   "firstSeen": zod.coerce.date(),
   "lastSeen": zod.coerce.date(),
+  "clockInAt": zod.coerce.date().nullish(),
+  "clockOutAt": zod.coerce.date().nullish(),
   "zoneId": zod.number().nullish(),
   "zoneName": zod.string().nullish(),
   "totalMinutes": zod.number().nullish(),
-  "scheduleStatus": zod.string().nullish(),
+  "scheduleStatus": zod.union([zod.literal('on_time'),zod.literal('late'),zod.literal('no_schedule'),zod.literal(null)]).nullish(),
   "minutesLate": zod.number().nullish(),
   "scheduleStart": zod.string().nullish(),
   "scheduleEnd": zod.string().nullish(),
@@ -585,48 +580,6 @@ export const ListAttendanceResponseItem = zod.object({
   "minutesEarly": zod.number().nullish()
 })
 export const ListAttendanceResponse = zod.array(ListAttendanceResponseItem)
-
-export const GetAttendanceForm76QueryParams = zod.object({
-  "year": zod.coerce.number(),
-  "month": zod.coerce.number(),
-  "departmentId": zod.coerce.number().nullish(),
-  "employeeId": zod.coerce.number().nullish()
-})
-
-export const Form76DaySchema = zod.object({
-  "day": zod.number(),
-  "code": zod.string(),
-  "hours": zod.number().nullish(),
-  "isReview": zod.boolean()
-})
-
-export const Form76RowSchema = zod.object({
-  "employeeId": zod.number(),
-  "employeeName": zod.string(),
-  "employeeNumber": zod.string(),
-  "employeePhotoUrl": zod.string().nullish(),
-  "departmentName": zod.string(),
-  "days": zod.array(Form76DaySchema),
-  "totalDaysWorked": zod.number(),
-  "totalHours": zod.number(),
-  "normHours": zod.number(),
-  "overtime": zod.number(),
-  "nightHours": zod.number()
-})
-
-export const GetAttendanceForm76Response = zod.object({
-  "year": zod.number(),
-  "month": zod.number(),
-  "daysInMonth": zod.number(),
-  "workingDays": zod.number(),
-  "normHours": zod.number(),
-  "totalEmployees": zod.number(),
-  "totalHours": zod.number(),
-  "totalOvertime": zod.number(),
-  "totalNightHours": zod.number(),
-  "reviewDays": zod.number(),
-  "rows": zod.array(Form76RowSchema)
-})
 
 
 /**
@@ -644,12 +597,21 @@ export const GetTodayAttendanceResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeNumber": zod.string().nullish(),
   "employeePhotoUrl": zod.string().nullish(),
+  "departmentName": zod.string().nullish(),
   "date": zod.coerce.date(),
   "firstSeen": zod.coerce.date(),
   "lastSeen": zod.coerce.date(),
+  "clockInAt": zod.coerce.date().nullish(),
+  "clockOutAt": zod.coerce.date().nullish(),
   "zoneId": zod.number().nullish(),
   "zoneName": zod.string().nullish(),
-  "totalMinutes": zod.number().nullish()
+  "totalMinutes": zod.number().nullish(),
+  "scheduleStatus": zod.union([zod.literal('on_time'),zod.literal('late'),zod.literal('no_schedule'),zod.literal(null)]).nullish(),
+  "minutesLate": zod.number().nullish(),
+  "scheduleStart": zod.string().nullish(),
+  "scheduleEnd": zod.string().nullish(),
+  "earlyDeparture": zod.boolean().nullish(),
+  "minutesEarly": zod.number().nullish()
 })),
   "absentRecords": zod.array(zod.object({
   "employeeId": zod.number(),
@@ -699,7 +661,52 @@ export const GetAttendanceReportResponse = zod.object({
   "lastSeen": zod.coerce.date().nullish(),
   "zoneName": zod.string().nullish(),
   "leaveType": zod.string().nullish(),
-  "leaveReason": zod.string().nullish()
+  "leaveReason": zod.string().nullish(),
+  "scheduleStatus": zod.union([zod.literal('on_time'),zod.literal('late'),zod.literal('no_schedule'),zod.literal(null)]).nullish(),
+  "minutesLate": zod.number().nullish(),
+  "scheduleStart": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Monthly Form 76 attendance roster
+ */
+export const GetAttendanceForm76QueryParams = zod.object({
+  "year": zod.coerce.number(),
+  "month": zod.coerce.number(),
+  "departmentId": zod.coerce.number().nullish(),
+  "employeeId": zod.coerce.number().nullish()
+})
+
+export const GetAttendanceForm76Response = zod.object({
+  "year": zod.number(),
+  "month": zod.number(),
+  "daysInMonth": zod.number(),
+  "workingDays": zod.number(),
+  "normHours": zod.number(),
+  "totalEmployees": zod.number(),
+  "totalHours": zod.number(),
+  "totalOvertime": zod.number(),
+  "totalNightHours": zod.number(),
+  "reviewDays": zod.number(),
+  "rows": zod.array(zod.object({
+  "employeeId": zod.number(),
+  "employeeName": zod.string(),
+  "employeeNumber": zod.string(),
+  "employeePhotoUrl": zod.string().nullish(),
+  "departmentName": zod.string(),
+  "days": zod.array(zod.object({
+  "day": zod.number(),
+  "code": zod.string(),
+  "hours": zod.number().nullish(),
+  "isReview": zod.boolean().optional()
+})),
+  "totalDaysWorked": zod.number(),
+  "totalHours": zod.number(),
+  "normHours": zod.number(),
+  "overtime": zod.number(),
+  "nightHours": zod.number()
 }))
 })
 
@@ -848,7 +855,12 @@ export const ListZoneSchedulesResponseItem = zod.object({
   "zoneName": zod.string().nullish(),
   "dayOfWeek": zod.number().min(1).max(listZoneSchedulesResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
   "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM'),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
   "endTime": zod.string().describe('HH:MM')
+}))
 })
 export const ListZoneSchedulesResponse = zod.array(ListZoneSchedulesResponseItem)
 
@@ -864,7 +876,12 @@ export const UpsertZoneScheduleBody = zod.object({
   "zoneId": zod.number(),
   "dayOfWeek": zod.number().min(1).max(upsertZoneScheduleBodyDayOfWeekMax),
   "startTime": zod.string(),
-  "endTime": zod.string()
+  "endTime": zod.string(),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM')
+})).optional()
 })
 
 export const upsertZoneScheduleResponseDayOfWeekMax = 7;
@@ -877,7 +894,12 @@ export const UpsertZoneScheduleResponse = zod.object({
   "zoneName": zod.string().nullish(),
   "dayOfWeek": zod.number().min(1).max(upsertZoneScheduleResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
   "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM'),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
   "endTime": zod.string().describe('HH:MM')
+}))
 })
 
 
@@ -970,7 +992,12 @@ export const ListDepartmentSchedulesResponseItem = zod.object({
   "departmentName": zod.string().nullish(),
   "dayOfWeek": zod.number().min(1).max(listDepartmentSchedulesResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
   "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM'),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
   "endTime": zod.string().describe('HH:MM')
+}))
 })
 export const ListDepartmentSchedulesResponse = zod.array(ListDepartmentSchedulesResponseItem)
 
@@ -986,7 +1013,12 @@ export const UpsertDepartmentScheduleBody = zod.object({
   "departmentId": zod.number(),
   "dayOfWeek": zod.number().min(1).max(upsertDepartmentScheduleBodyDayOfWeekMax),
   "startTime": zod.string(),
-  "endTime": zod.string()
+  "endTime": zod.string(),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM')
+})).optional()
 })
 
 export const upsertDepartmentScheduleResponseDayOfWeekMax = 7;
@@ -999,7 +1031,12 @@ export const UpsertDepartmentScheduleResponse = zod.object({
   "departmentName": zod.string().nullish(),
   "dayOfWeek": zod.number().min(1).max(upsertDepartmentScheduleResponseDayOfWeekMax).describe('1=Monday, 2=Tuesday, ... 7=Sunday (ISO)'),
   "startTime": zod.string().describe('HH:MM'),
+  "endTime": zod.string().describe('HH:MM'),
+  "breaks": zod.array(zod.object({
+  "name": zod.string().describe('e.g. Обедна почивка'),
+  "startTime": zod.string().describe('HH:MM'),
   "endTime": zod.string().describe('HH:MM')
+}))
 })
 
 
@@ -1082,5 +1119,215 @@ export const GetDashboardPresenceResponseItem = zod.object({
   "totalMinutes": zod.number().nullish()
 })
 export const GetDashboardPresenceResponse = zod.array(GetDashboardPresenceResponseItem)
+
+
+/**
+ * @summary List all visitors
+ */
+export const ListVisitorsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "company": zod.string().nullish(),
+  "type": zod.enum(['supplier', 'carrier', 'client', 'guest', 'other']),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cardNumber": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListVisitorsResponse = zod.array(ListVisitorsResponseItem)
+
+
+/**
+ * @summary Create a visitor
+ */
+export const CreateVisitorBody = zod.object({
+  "name": zod.string(),
+  "company": zod.string().nullish(),
+  "type": zod.enum(['supplier', 'carrier', 'client', 'guest', 'other']),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cardNumber": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "active": zod.boolean().optional()
+})
+
+export const CreateVisitorResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "company": zod.string().nullish(),
+  "type": zod.enum(['supplier', 'carrier', 'client', 'guest', 'other']),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cardNumber": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get a visitor by id
+ */
+export const GetVisitorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVisitorResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "company": zod.string().nullish(),
+  "type": zod.enum(['supplier', 'carrier', 'client', 'guest', 'other']),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cardNumber": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a visitor
+ */
+export const UpdateVisitorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateVisitorBody = zod.object({
+  "name": zod.string(),
+  "company": zod.string().nullish(),
+  "type": zod.enum(['supplier', 'carrier', 'client', 'guest', 'other']),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cardNumber": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "active": zod.boolean().optional()
+})
+
+export const UpdateVisitorResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "company": zod.string().nullish(),
+  "type": zod.enum(['supplier', 'carrier', 'client', 'guest', 'other']),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "cardNumber": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a visitor
+ */
+export const DeleteVisitorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteVisitorResponse = zod.void()
+
+
+/**
+ * @summary List visits for a visitor
+ */
+export const GetVisitorVisitsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVisitorVisitsResponseItem = zod.object({
+  "id": zod.number(),
+  "visitorId": zod.number(),
+  "purpose": zod.string().nullish(),
+  "hostName": zod.string().nullish(),
+  "checkIn": zod.coerce.date(),
+  "checkOut": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const GetVisitorVisitsResponse = zod.array(GetVisitorVisitsResponseItem)
+
+
+/**
+ * @summary Check in a visitor
+ */
+export const CheckInVisitorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CheckInVisitorBody = zod.object({
+  "purpose": zod.string().nullish(),
+  "hostName": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "checkOut": zod.coerce.date().nullish()
+})
+
+export const CheckInVisitorResponse = zod.object({
+  "id": zod.number(),
+  "visitorId": zod.number(),
+  "purpose": zod.string().nullish(),
+  "hostName": zod.string().nullish(),
+  "checkIn": zod.coerce.date(),
+  "checkOut": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Check out a visitor or update visit
+ */
+export const UpdateVisitorVisitParams = zod.object({
+  "id": zod.coerce.number(),
+  "visitId": zod.coerce.number()
+})
+
+export const UpdateVisitorVisitBody = zod.object({
+  "purpose": zod.string().nullish(),
+  "hostName": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "checkOut": zod.coerce.date().nullish()
+})
+
+export const UpdateVisitorVisitResponse = zod.object({
+  "id": zod.number(),
+  "visitorId": zod.number(),
+  "purpose": zod.string().nullish(),
+  "hostName": zod.string().nullish(),
+  "checkIn": zod.coerce.date(),
+  "checkOut": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List recent visitor visits
+ */
+export const ListVisitorVisitsResponseItem = zod.object({
+  "id": zod.number(),
+  "visitorId": zod.number(),
+  "visitorName": zod.string().nullish(),
+  "visitorCompany": zod.string().nullish(),
+  "visitorType": zod.string().nullish(),
+  "purpose": zod.string().nullish(),
+  "hostName": zod.string().nullish(),
+  "checkIn": zod.coerce.date(),
+  "checkOut": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish()
+})
+export const ListVisitorVisitsResponse = zod.array(ListVisitorVisitsResponseItem)
 
 
