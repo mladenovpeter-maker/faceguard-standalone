@@ -146,37 +146,40 @@ export default function EmployeeList() {
       </Dialog>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Регистър на персонала</h1>
+        <div>
+          <h1 className="text-2xl font-display font-bold tracking-tight text-foreground">Регистър на персонала</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Управление на служителите и техните права за достъп</p>
+        </div>
         <Link href="/employees/new">
-          <Button className="font-mono text-xs uppercase tracking-wider">
-            <Plus className="mr-2 h-4 w-4" /> Регистрирай служител
+          <Button className="gap-2 shadow-md shadow-primary/20">
+            <Plus className="h-4 w-4" /> Регистрирай служител
           </Button>
         </Link>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-center bg-card p-4 rounded-lg border border-border">
+      <div className="flex flex-col sm:flex-row gap-3 items-center bg-card p-3.5 rounded-xl border border-card-border shadow-sm">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Търсене по име или номер..."
-            className="pl-9 font-mono bg-background"
+            placeholder="Търсене по ime или служебен номер..."
+            className="pl-9 bg-background rounded-lg"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
+      <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
         <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow>
-              <TableHead className="w-[80px]">Снимка</TableHead>
-              <TableHead>Име</TableHead>
-              <TableHead>Служебен №</TableHead>
-              <TableHead>Отдел</TableHead>
-              <TableHead>Длъжност</TableHead>
-              <TableHead>Статус</TableHead>
-              <TableHead className="text-right">Действия</TableHead>
+          <TableHeader>
+            <TableRow className="bg-muted/60 hover:bg-muted/60">
+              <TableHead className="w-[72px] text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Снимка</TableHead>
+              <TableHead className="text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Ime</TableHead>
+              <TableHead className="text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Служебен №</TableHead>
+              <TableHead className="text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Отдел</TableHead>
+              <TableHead className="text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Длъжност</TableHead>
+              <TableHead className="text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Статус</TableHead>
+              <TableHead className="text-right text-[11px] font-mono font-bold uppercase tracking-[0.1em] text-muted-foreground">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
