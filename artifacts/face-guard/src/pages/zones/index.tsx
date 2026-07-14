@@ -1,9 +1,8 @@
 import {
   useListZones, useCreateZone, useUpdateZone, useDeleteZone, getListZonesQueryKey,
-  useListZoneSchedules, useUpsertZoneSchedule, useDeleteZoneSchedule, getListZoneSchedulesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Map as MapIcon, Plus, Pencil, Trash2, Clock, LogIn, LogOut } from "lucide-react";
+import { Map as MapIcon, Plus, Pencil, Trash2, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -18,8 +17,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { ScheduleEditor } from "@/components/schedule-editor";
-import type { UpsertScheduleData, ScheduleDay } from "@/components/schedule-editor";
 
 /* ─── Zone form ─── */
 const zoneSchema = z.object({
@@ -71,60 +68,6 @@ function ZoneForm({ defaultValues, onSubmit, isPending, submitLabel }: {
         </Button>
       </form>
     </Form>
-  );
-}
-
-/* ─── Work schedule dialog ─── */
-function WorkScheduleDialog({ zoneId, zoneName }: { zoneId: number; zoneName: string }) {
-  const qc = useQueryClient();
-  const { toast } = useToast();
-  const [open, setOpen] = useState(false);
-
-  const { data: schedules = [], isLoading } = useListZoneSchedules(
-    { zoneId },
-    { query: { enabled: open } }
-  );
-
-  const upsert = useUpsertZoneSchedule();
-  const del = useDeleteZoneSchedule();
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: getListZoneSchedulesQueryKey({ zoneId }) });
-
-  async function handleUpsert(data: UpsertScheduleData) {
-    await upsert.mutateAsync(
-      { data: { zoneId, ...data } },
-      { onSuccess: invalidate, onError: () => toast({ title: "Грешка при запазване", variant: "destructive" }) },
-    );
-  }
-
-  async function handleDelete(id: number) {
-    await del.mutateAsync(
-      { id },
-      { onSuccess: invalidate, onError: () => toast({ title: "Грешка при изтриване", variant: "destructive" }) },
-    );
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Работно Време">
-          <Clock className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Работно Време — {zoneName}</DialogTitle>
-        </DialogHeader>
-        <div className="mt-2">
-          <ScheduleEditor
-            schedules={schedules as ScheduleDay[]}
-            onUpsert={handleUpsert}
-            onDelete={handleDelete}
-            isLoading={isLoading}
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -232,8 +175,6 @@ export default function ZoneList() {
                   <TableCell className="text-center font-mono text-muted-foreground">{zone.cameraCount || 0}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <WorkScheduleDialog zoneId={zone.id} zoneName={zone.name} />
-
                       <Button
                         variant="ghost" size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
