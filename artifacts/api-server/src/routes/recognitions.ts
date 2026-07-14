@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, and, gte, lte, sql, isNotNull } from "drizzle-orm";
-import { db, recognitionEventsTable, camerasTable, zonesTable, employeesTable, employeePhotosTable } from "@workspace/db";
+import { db, recognitionEventsTable, camerasTable, zonesTable, employeesTable, employeePhotosTable, attendanceTable } from "@workspace/db";
 import {
   ListRecognitionsQueryParams,
   CreateRecognitionBody,
@@ -11,6 +11,45 @@ import { computeAllFaceDescriptorsAsync } from "../lib/face-recognition-pool";
 import { matchDescriptor, type FaceCandidate } from "../lib/face-recognition";
 
 const router: IRouter = Router();
+
+/**
+ * Upsert an attendance record for a recognized employee.
+ * - First recognition of the day  → INSERT (firstSeen = lastSeen = detectedAt)
+ * - Subsequent recognitions       → UPDATE lastSeen if newer, recalculate totalMinutes
+ * - firstSeen is never moved forward (keeps the earliest arrival time)
+ */
+async function upsertAttendance(
+  employeeId: number,
+  zoneId: number | null,
+  detectedAt: Date,
+): Promise<void> {
+  const dateStr = detectedAt.toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+  await db
+    .insert(attendanceTable)
+    .values({
+      employeeId,
+      date: dateStr,
+      firstSeen: detectedAt,
+      lastSeen: detectedAt,
+      zoneId,
+      totalMinutes: 0,
+    })
+    .onConflictDoUpdate({
+      target: [attendanceTable.employeeId, attendanceTable.date],
+      set: {
+        // Only extend lastSeen forward in time
+        lastSeen: sql`GREATEST(${attendanceTable.lastSeen}, ${detectedAt.toISOString()})`,
+        // Only move firstSeen backward in time (edge case: out-of-order events)
+        firstSeen: sql`LEAST(${attendanceTable.firstSeen}, ${detectedAt.toISOString()})`,
+        totalMinutes: sql`EXTRACT(EPOCH FROM (
+          GREATEST(${attendanceTable.lastSeen}, ${detectedAt.toISOString()}) -
+          LEAST(${attendanceTable.firstSeen}, ${detectedAt.toISOString()})
+        ))::int / 60`,
+        updatedAt: sql`NOW()`,
+      },
+    });
+}
 
 router.get("/recognitions", async (req, res): Promise<void> => {
   const query = ListRecognitionsQueryParams.safeParse(req.query);
@@ -95,6 +134,11 @@ router.post("/recognitions", async (req, res): Promise<void> => {
       const snapshotUrl = parsed.data.snapshotUrl ?? parsed.data.snapshotBase64 ?? null;
       const detectedAt = new Date(parsed.data.detectedAt);
 
+      // Fetch camera zone once — needed for attendance records.
+      const [cam] = await db.select({ zoneId: camerasTable.zoneId })
+        .from(camerasTable).where(eq(camerasTable.id, parsed.data.cameraId));
+      const camZoneId = cam?.zoneId ?? null;
+
       const insertedEvents = await Promise.all(
         descriptors.map(async (descriptor) => {
           const match = matchDescriptor(descriptor, candidates);
@@ -112,6 +156,12 @@ router.post("/recognitions", async (req, res): Promise<void> => {
               : {},
             match ? "AI fallback matched a face" : "AI fallback: face detected but no match",
           );
+          // Keep attendance in sync for recognized employees.
+          if (match) {
+            await upsertAttendance(match.employeeId, camZoneId, detectedAt).catch((e) =>
+              req.log.warn({ err: e, employeeId: match.employeeId }, "Attendance upsert failed"),
+            );
+          }
           return evt;
         }),
       );
@@ -143,19 +193,27 @@ router.post("/recognitions", async (req, res): Promise<void> => {
 
   // Non-AI path: camera already decided status (recognized / denied) — trust it.
   const snapshotUrl = parsed.data.snapshotUrl ?? null;
+  const detectedAtNonAi = new Date(parsed.data.detectedAt);
   const [event] = await db.insert(recognitionEventsTable).values({
     cameraId: parsed.data.cameraId,
     employeeId: parsed.data.employeeId ?? null,
     status: parsed.data.status,
     confidence: parsed.data.confidence,
     snapshotUrl,
-    detectedAt: new Date(parsed.data.detectedAt),
+    detectedAt: detectedAtNonAi,
   }).returning();
 
   const [camera] = await db.select({ name: camerasTable.name, zoneId: camerasTable.zoneId })
     .from(camerasTable).where(eq(camerasTable.id, event.cameraId));
 
   const zoneId = camera?.zoneId ?? null;
+
+  // Sync attendance when the camera itself confirmed recognition.
+  if (event.status === "recognized" && event.employeeId) {
+    await upsertAttendance(event.employeeId, zoneId, detectedAtNonAi).catch((e) =>
+      req.log.warn({ err: e, employeeId: event.employeeId }, "Attendance upsert failed"),
+    );
+  }
   const [zone] = zoneId ? await db.select({ name: zonesTable.name }).from(zonesTable).where(eq(zonesTable.id, zoneId)) : [null];
   const [emp] = event.employeeId ? await db.select().from(employeesTable).where(eq(employeesTable.id, event.employeeId)) : [null];
 
