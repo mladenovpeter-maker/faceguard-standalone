@@ -3,7 +3,7 @@ import {
   useListZoneSchedules, useUpsertZoneSchedule, useDeleteZoneSchedule, getListZoneSchedulesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Map as MapIcon, Plus, Pencil, Trash2, Clock, LogIn, LogOut, LayoutGrid } from "lucide-react";
+import { Map as MapIcon, Plus, Pencil, Trash2, Clock, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ import type { UpsertScheduleData, ScheduleDay } from "@/components/schedule-edit
 const zoneSchema = z.object({
   name: z.string().min(1, "Наименованието е задължително"),
   description: z.string().optional(),
-  zoneType: z.enum(["entry", "exit", "general"]),
+  zoneType: z.enum(["entry", "exit"]),
 });
 type ZoneFormValues = z.infer<typeof zoneSchema>;
 
@@ -59,7 +59,6 @@ function ZoneForm({ defaultValues, onSubmit, isPending, submitLabel }: {
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl><SelectTrigger><SelectValue placeholder="Избери тип" /></SelectTrigger></FormControl>
               <SelectContent>
-                <SelectItem value="general">Обща (без турникет)</SelectItem>
                 <SelectItem value="entry">Вход — стартира работното време</SelectItem>
                 <SelectItem value="exit">Изход — приключва работното време</SelectItem>
               </SelectContent>
@@ -138,7 +137,7 @@ export default function ZoneList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
-  const [editZone, setEditZone] = useState<{ id: number; name: string; description?: string | null; zoneType: string } | null>(null);
+  const [editZone, setEditZone] = useState<{ id: number; name: string; description?: string | null; zoneType: "entry" | "exit" } | null>(null);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListZonesQueryKey() });
 
@@ -177,7 +176,7 @@ export default function ZoneList() {
           <DialogContent>
             <DialogHeader><DialogTitle>Създаване на нова зона</DialogTitle></DialogHeader>
             <ZoneForm
-              defaultValues={{ name: "", description: "", zoneType: "general" }}
+              defaultValues={{ name: "", description: "", zoneType: "entry" }}
               onSubmit={handleCreate}
               isPending={createZone.isPending}
               submitLabel="Създай зона"
@@ -238,7 +237,7 @@ export default function ZoneList() {
                       <Button
                         variant="ghost" size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => setEditZone({ id: zone.id, name: zone.name, description: zone.description, zoneType: zone.zoneType ?? "general" })}
+                        onClick={() => setEditZone({ id: zone.id, name: zone.name, description: zone.description, zoneType: (zone.zoneType === "exit" ? "exit" : "entry") })}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -281,7 +280,6 @@ export default function ZoneList() {
 }
 
 function ZoneTypeBadge({ type }: { type: string }) {
-  if (type === "entry") return <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20"><LogIn className="h-3 w-3 mr-1" />ВХОД</Badge>;
-  if (type === "exit")  return <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20"><LogOut className="h-3 w-3 mr-1" />ИЗХОД</Badge>;
-  return <Badge variant="outline" className="bg-muted text-muted-foreground"><LayoutGrid className="h-3 w-3 mr-1" />ОБЩА</Badge>;
+  if (type === "exit") return <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20"><LogOut className="h-3 w-3 mr-1" />ИЗХОД</Badge>;
+  return <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20"><LogIn className="h-3 w-3 mr-1" />ВХОД</Badge>;
 }
