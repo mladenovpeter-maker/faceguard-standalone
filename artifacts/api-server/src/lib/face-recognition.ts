@@ -83,32 +83,43 @@ export async function computeFaceDescriptor(imageBuffer: Buffer): Promise<number
   const ctx = canvas.getContext("2d");
   ctx.drawImage(image, 0, 0);
 
-  // --- Primary: SsdMobilenetv1 ---
-  // 0.5 is the standard recommended threshold — avoids false-positives on car
-  // headlights / grilles that trigger at very low confidence values.
-  const ssdDetection = await faceapi
-    .detectSingleFace(canvas as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-    .withFaceLandmarks()
-    .withFaceDescriptor();
-
-  if (ssdDetection) {
-    logger.info({ detector: "ssd", score: ssdDetection.detection.score }, "Face detected");
-    return Array.from(ssdDetection.descriptor);
+  // Try detection on the original frame first, then on a 2× upscaled copy.
+  // Real IP cameras at 640×360 often have the face occupying <15% of the frame
+  // (person standing 3–5 m away). Upscaling before detection helps the model
+  // find small faces without dropping thresholds so low we get false positives.
+  const canvases: ReturnType<typeof canvasLib.createCanvas>[] = [canvas];
+  if (image.width <= 640) {
+    const up = canvasLib.createCanvas(image.width * 2, image.height * 2);
+    up.getContext("2d").drawImage(image, 0, 0, up.width, up.height);
+    canvases.push(up);
   }
 
-  // --- Secondary: TinyFaceDetector (higher score threshold to avoid false positives) ---
-  for (const inputSize of [224, 320, 416]) {
-    const detection = await faceapi
-      .detectSingleFace(
-        canvas as unknown as faceapi.TNetInput,
-        new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.4 }),
-      )
+  // --- Primary: SsdMobilenetv1 (0.3 threshold — suits cameras at 3–5 m) ---
+  for (const c of canvases) {
+    const det = await faceapi
+      .detectSingleFace(c as unknown as faceapi.TNetInput, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
       .withFaceLandmarks()
       .withFaceDescriptor();
+    if (det) {
+      logger.info({ detector: "ssd", score: det.detection.score, upscaled: c !== canvas }, "Face detected");
+      return Array.from(det.descriptor);
+    }
+  }
 
-    if (detection) {
-      logger.info({ detector: "tiny", inputSize, score: detection.detection.score }, "Face detected");
-      return Array.from(detection.descriptor);
+  // --- Secondary: TinyFaceDetector at multiple input sizes ---
+  for (const c of canvases) {
+    for (const inputSize of [224, 320, 416, 608]) {
+      const det = await faceapi
+        .detectSingleFace(
+          c as unknown as faceapi.TNetInput,
+          new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.3 }),
+        )
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+      if (det) {
+        logger.info({ detector: "tiny", inputSize, score: det.detection.score, upscaled: c !== canvas }, "Face detected");
+        return Array.from(det.descriptor);
+      }
     }
   }
 

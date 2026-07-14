@@ -154,6 +154,11 @@ async function submitFrame(camera: typeof camerasTable.$inferSelect, frame: Buff
     return;
   }
 
+  if (res.status === 204) {
+    // No face detected in this frame — normal, nothing to log.
+    return;
+  }
+
   if (!res.ok) {
     logger.warn(
       { cameraId: camera.id, status: res.status, body: await res.text() },
@@ -165,6 +170,8 @@ async function submitFrame(camera: typeof camerasTable.$inferSelect, frame: Buff
   const result = (await res.json()) as { status: string; employeeName?: string | null };
   if (result.status === "recognized") {
     logger.info({ cameraId: camera.id, employeeName: result.employeeName }, "Face recognized via internal AI fallback");
+  } else if (result.status === "unknown") {
+    logger.info({ cameraId: camera.id }, "Face detected but not matched to any employee");
   }
 }
 
