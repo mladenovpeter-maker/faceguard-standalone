@@ -10,6 +10,8 @@ export const attendanceTable = pgTable("attendance", {
   date: date("date", { mode: "string" }).notNull(),
   firstSeen: timestamp("first_seen", { withTimezone: true }).notNull(),
   lastSeen: timestamp("last_seen", { withTimezone: true }).notNull(),
+  clockInAt: timestamp("clock_in_at", { withTimezone: true }),
+  clockOutAt: timestamp("clock_out_at", { withTimezone: true }),
   zoneId: integer("zone_id").references(() => zonesTable.id),
   totalMinutes: integer("total_minutes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

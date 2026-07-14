@@ -129,6 +129,8 @@ router.get("/attendance/form76", async (req, res): Promise<void> => {
       date:         attendanceTable.date,
       firstSeen:    attendanceTable.firstSeen,
       lastSeen:     attendanceTable.lastSeen,
+      clockInAt:    attendanceTable.clockInAt,
+      clockOutAt:   attendanceTable.clockOutAt,
       totalMinutes: attendanceTable.totalMinutes,
     })
     .from(attendanceTable)
@@ -205,7 +207,9 @@ router.get("/attendance/form76", async (req, res): Promise<void> => {
       if (att) {
         const hrs = att.totalMinutes ? Math.round(att.totalMinutes / 60 * 100) / 100 : 0;
         const ot  = Math.max(0, hrs - 8);
-        const nh  = nightMinutes(att.firstSeen, att.lastSeen) / 60;
+        const nightStart = att.clockInAt  ?? att.firstSeen;
+        const nightEnd   = att.clockOutAt ?? att.lastSeen;
+        const nh  = nightMinutes(nightStart, nightEnd) / 60;
         workedDays++;
         totalHrs    += hrs;
         overtimeHrs += ot;

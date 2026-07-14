@@ -7,6 +7,7 @@ export const zonesTable = pgTable("zones", {
   name: text("name").notNull(),
   description: text("description"),
   accessLevel: text("access_level").notNull().default("public"),
+  zoneType: text("zone_type").notNull().default("general"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

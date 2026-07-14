@@ -103,6 +103,15 @@ export interface DepartmentInput {
   name: string;
 }
 
+export interface ScheduleBreak {
+  /** e.g. Обедна почивка */
+  name: string;
+  /** HH:MM */
+  startTime: string;
+  /** HH:MM */
+  endTime: string;
+}
+
 export interface DepartmentWorkSchedule {
   id: number;
   departmentId: number;
@@ -118,6 +127,7 @@ export interface DepartmentWorkSchedule {
   startTime: string;
   /** HH:MM */
   endTime: string;
+  breaks: ScheduleBreak[];
 }
 
 export interface DepartmentWorkScheduleInput {
@@ -129,6 +139,7 @@ export interface DepartmentWorkScheduleInput {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  breaks?: ScheduleBreak[];
 }
 
 export interface PhotoUpload {
@@ -274,12 +285,11 @@ export interface CameraTestResult {
   message: string;
   /** @nullable */
   latencyMs?: number | null;
-  /** @nullable */
+  /**
+     * Base64-encoded JPEG snapshot from the camera (data:image/jpeg;base64,...)
+     * @nullable
+     */
   snapshotBase64?: string | null;
-}
-
-export interface CameraCaptureResult {
-  snapshotBase64: string;
 }
 
 export type ZoneAccessLevel = typeof ZoneAccessLevel[keyof typeof ZoneAccessLevel];
@@ -291,12 +301,22 @@ export const ZoneAccessLevel = {
   secure: 'secure',
 } as const;
 
+export type ZoneZoneType = typeof ZoneZoneType[keyof typeof ZoneZoneType];
+
+
+export const ZoneZoneType = {
+  entry: 'entry',
+  exit: 'exit',
+  general: 'general',
+} as const;
+
 export interface Zone {
   id: number;
   name: string;
   /** @nullable */
   description?: string | null;
   accessLevel: ZoneAccessLevel;
+  zoneType: ZoneZoneType;
   cameraCount?: number;
   createdAt: string;
 }
@@ -310,11 +330,21 @@ export const ZoneInputAccessLevel = {
   secure: 'secure',
 } as const;
 
+export type ZoneInputZoneType = typeof ZoneInputZoneType[keyof typeof ZoneInputZoneType];
+
+
+export const ZoneInputZoneType = {
+  entry: 'entry',
+  exit: 'exit',
+  general: 'general',
+} as const;
+
 export interface ZoneInput {
   /** @minLength 1 */
   name: string;
   description?: string;
   accessLevel: ZoneInputAccessLevel;
+  zoneType?: ZoneInputZoneType;
 }
 
 export type ZoneUpdateAccessLevel = typeof ZoneUpdateAccessLevel[keyof typeof ZoneUpdateAccessLevel];
@@ -326,11 +356,21 @@ export const ZoneUpdateAccessLevel = {
   secure: 'secure',
 } as const;
 
+export type ZoneUpdateZoneType = typeof ZoneUpdateZoneType[keyof typeof ZoneUpdateZoneType];
+
+
+export const ZoneUpdateZoneType = {
+  entry: 'entry',
+  exit: 'exit',
+  general: 'general',
+} as const;
+
 export interface ZoneUpdate {
   name?: string;
   /** @nullable */
   description?: string | null;
   accessLevel?: ZoneUpdateAccessLevel;
+  zoneType?: ZoneUpdateZoneType;
 }
 
 export interface AccessRule {
@@ -410,6 +450,18 @@ export interface RecognitionInput {
   detectedAt: string;
 }
 
+/**
+ * @nullable
+ */
+export type AttendanceReportRowScheduleStatus = typeof AttendanceReportRowScheduleStatus[keyof typeof AttendanceReportRowScheduleStatus] | null;
+
+
+export const AttendanceReportRowScheduleStatus = {
+  on_time: 'on_time',
+  late: 'late',
+  no_schedule: 'no_schedule',
+} as const;
+
 export interface AttendanceReportRow {
   employeeId: number;
   employeeName: string;
@@ -436,6 +488,12 @@ export interface AttendanceReportRow {
   leaveType?: string | null;
   /** @nullable */
   leaveReason?: string | null;
+  /** @nullable */
+  scheduleStatus?: AttendanceReportRowScheduleStatus;
+  /** @nullable */
+  minutesLate?: number | null;
+  /** @nullable */
+  scheduleStart?: string | null;
 }
 
 export interface AttendanceReport {
@@ -445,6 +503,18 @@ export interface AttendanceReport {
   workingDays: number;
   rows: AttendanceReportRow[];
 }
+
+/**
+ * @nullable
+ */
+export type AttendanceRecordScheduleStatus = typeof AttendanceRecordScheduleStatus[keyof typeof AttendanceRecordScheduleStatus] | null;
+
+
+export const AttendanceRecordScheduleStatus = {
+  on_time: 'on_time',
+  late: 'late',
+  no_schedule: 'no_schedule',
+} as const;
 
 export interface AttendanceRecord {
   id: number;
@@ -461,13 +531,17 @@ export interface AttendanceRecord {
   firstSeen: string;
   lastSeen: string;
   /** @nullable */
+  clockInAt?: string | null;
+  /** @nullable */
+  clockOutAt?: string | null;
+  /** @nullable */
   zoneId?: number | null;
   /** @nullable */
   zoneName?: string | null;
   /** @nullable */
   totalMinutes?: number | null;
   /** @nullable */
-  scheduleStatus?: string | null;
+  scheduleStatus?: AttendanceRecordScheduleStatus;
   /** @nullable */
   minutesLate?: number | null;
   /** @nullable */
@@ -608,6 +682,7 @@ export interface ZoneWorkSchedule {
   startTime: string;
   /** HH:MM */
   endTime: string;
+  breaks: ScheduleBreak[];
 }
 
 export interface ZoneWorkScheduleInput {
@@ -619,6 +694,7 @@ export interface ZoneWorkScheduleInput {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  breaks?: ScheduleBreak[];
 }
 
 export interface DashboardSummary {
@@ -661,6 +737,139 @@ export interface EmployeePresence {
   lastSeen?: string | null;
   /** @nullable */
   totalMinutes?: number | null;
+}
+
+export type VisitorType = typeof VisitorType[keyof typeof VisitorType];
+
+
+export const VisitorType = {
+  supplier: 'supplier',
+  carrier: 'carrier',
+  client: 'client',
+  guest: 'guest',
+  other: 'other',
+} as const;
+
+export interface Visitor {
+  id: number;
+  name: string;
+  /** @nullable */
+  company?: string | null;
+  type: VisitorType;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
+  /** @nullable */
+  cardNumber?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VisitorInput {
+  name: string;
+  /** @nullable */
+  company?: string | null;
+  type: VisitorType;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
+  /** @nullable */
+  cardNumber?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  active?: boolean;
+}
+
+export interface VisitorVisit {
+  id: number;
+  visitorId: number;
+  /** @nullable */
+  purpose?: string | null;
+  /** @nullable */
+  hostName?: string | null;
+  checkIn: string;
+  /** @nullable */
+  checkOut?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface VisitorVisitInput {
+  /** @nullable */
+  purpose?: string | null;
+  /** @nullable */
+  hostName?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  checkOut?: string | null;
+}
+
+export interface VisitorVisitWithInfo {
+  id: number;
+  visitorId: number;
+  /** @nullable */
+  visitorName?: string | null;
+  /** @nullable */
+  visitorCompany?: string | null;
+  /** @nullable */
+  visitorType?: string | null;
+  /** @nullable */
+  purpose?: string | null;
+  /** @nullable */
+  hostName?: string | null;
+  checkIn: string;
+  /** @nullable */
+  checkOut?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface Form76Day {
+  day: number;
+  code: string;
+  /** @nullable */
+  hours?: number | null;
+  isReview?: boolean;
+}
+
+export interface Form76Row {
+  employeeId: number;
+  employeeName: string;
+  employeeNumber: string;
+  /** @nullable */
+  employeePhotoUrl?: string | null;
+  departmentName: string;
+  days: Form76Day[];
+  totalDaysWorked: number;
+  totalHours: number;
+  normHours: number;
+  overtime: number;
+  nightHours: number;
+}
+
+export interface Form76Response {
+  year: number;
+  month: number;
+  daysInMonth: number;
+  workingDays: number;
+  normHours: number;
+  totalEmployees: number;
+  totalHours: number;
+  totalOvertime: number;
+  totalNightHours: number;
+  reviewDays: number;
+  rows: Form76Row[];
 }
 
 export type ListEmployeesParams = {
@@ -717,11 +926,24 @@ to?: string;
 /**
  * @nullable
  */
+departmentId?: number | null;
+/**
+ * @nullable
+ */
 employeeId?: number | null;
 /**
  * @nullable
  */
 zoneId?: number | null;
+};
+
+export type GetAttendanceReportParams = {
+from: string;
+to: string;
+/**
+ * @nullable
+ */
+employeeId?: number | null;
 /**
  * @nullable
  */
@@ -739,56 +961,6 @@ departmentId?: number | null;
  * @nullable
  */
 employeeId?: number | null;
-};
-
-export interface Form76Day {
-  day: number;
-  code: string;
-  /** @nullable */
-  hours?: number | null;
-  isReview: boolean;
-}
-
-export interface Form76Row {
-  employeeId: number;
-  employeeName: string;
-  employeeNumber: string;
-  /** @nullable */
-  employeePhotoUrl?: string | null;
-  departmentName: string;
-  days: Form76Day[];
-  totalDaysWorked: number;
-  totalHours: number;
-  normHours: number;
-  overtime: number;
-  nightHours: number;
-}
-
-export interface Form76Response {
-  year: number;
-  month: number;
-  daysInMonth: number;
-  workingDays: number;
-  normHours: number;
-  totalEmployees: number;
-  totalHours: number;
-  totalOvertime: number;
-  totalNightHours: number;
-  reviewDays: number;
-  rows: Form76Row[];
-}
-
-export type GetAttendanceReportParams = {
-from: string;
-to: string;
-/**
- * @nullable
- */
-employeeId?: number | null;
-/**
- * @nullable
- */
-departmentId?: number | null;
 };
 
 export type ListLeavesParams = {
@@ -829,98 +1001,3 @@ export type ListDepartmentSchedulesParams = {
 departmentId?: number | null;
 };
 
-  export type VisitorType = typeof VisitorType[keyof typeof VisitorType];
-
-  export const VisitorType = {
-    supplier: 'supplier',
-    carrier: 'carrier',
-    client: 'client',
-    guest: 'guest',
-    other: 'other',
-  } as const;
-
-  export interface Visitor {
-    id: number;
-    name: string;
-    /** @nullable */
-    company?: string | null;
-    type: VisitorType;
-    /** @nullable */
-    phone?: string | null;
-    /** @nullable */
-    email?: string | null;
-    /** @nullable */
-    photoUrl?: string | null;
-    /** @nullable */
-    cardNumber?: string | null;
-    /** @nullable */
-    notes?: string | null;
-    active: boolean;
-    createdAt: string;
-    updatedAt: string;
-  }
-
-  export interface VisitorInput {
-    name: string;
-    /** @nullable */
-    company?: string | null;
-    type: VisitorType;
-    /** @nullable */
-    phone?: string | null;
-    /** @nullable */
-    email?: string | null;
-    /** @nullable */
-    photoUrl?: string | null;
-    /** @nullable */
-    cardNumber?: string | null;
-    /** @nullable */
-    notes?: string | null;
-    active?: boolean;
-  }
-
-  export interface VisitorVisit {
-    id: number;
-    visitorId: number;
-    /** @nullable */
-    purpose?: string | null;
-    /** @nullable */
-    hostName?: string | null;
-    checkIn: string;
-    /** @nullable */
-    checkOut?: string | null;
-    /** @nullable */
-    notes?: string | null;
-    createdAt: string;
-  }
-
-  export interface VisitorVisitInput {
-    /** @nullable */
-    purpose?: string | null;
-    /** @nullable */
-    hostName?: string | null;
-    /** @nullable */
-    notes?: string | null;
-    /** @nullable */
-    checkOut?: string | null;
-  }
-
-  export interface VisitorVisitWithInfo {
-    id: number;
-    visitorId: number;
-    /** @nullable */
-    visitorName?: string | null;
-    /** @nullable */
-    visitorCompany?: string | null;
-    /** @nullable */
-    visitorType?: string | null;
-    /** @nullable */
-    purpose?: string | null;
-    /** @nullable */
-    hostName?: string | null;
-    checkIn: string;
-    /** @nullable */
-    checkOut?: string | null;
-    /** @nullable */
-    notes?: string | null;
-  }
-  
