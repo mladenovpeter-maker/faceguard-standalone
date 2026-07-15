@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
-import { eq, and, sql, lte, gte } from "drizzle-orm";
+import { eq, and, sql, lte, gte, inArray } from "drizzle-orm";
 import {
   db, attendanceTable, employeesTable, zonesTable, leavesTable,
   departmentsTable, departmentWorkSchedulesTable,
+  recognitionEventsTable, camerasTable,
 } from "@workspace/db";
 import {
   ListAttendanceQueryParams,
@@ -126,6 +127,51 @@ function computeScheduleInfo(
   };
 }
 
+/* ── session stats from recognition events ── */
+
+interface SessionStats {
+  entryCount: number;
+  exitCount: number;
+}
+
+async function fetchSessionStats(
+  employeeIds: number[],
+  minDate: string,
+  maxDate: string,
+): Promise<Map<string, SessionStats>> {
+  if (employeeIds.length === 0) return new Map();
+
+  const events = await db
+    .select({
+      employeeId: recognitionEventsTable.employeeId,
+      detectedAt: recognitionEventsTable.detectedAt,
+      zoneType: zonesTable.zoneType,
+    })
+    .from(recognitionEventsTable)
+    .innerJoin(camerasTable, eq(camerasTable.id, recognitionEventsTable.cameraId))
+    .innerJoin(zonesTable, eq(zonesTable.id, camerasTable.zoneId))
+    .where(
+      and(
+        inArray(recognitionEventsTable.employeeId, employeeIds),
+        eq(recognitionEventsTable.status, "recognized"),
+        gte(recognitionEventsTable.detectedAt, new Date(minDate + "T00:00:00Z")),
+        lte(recognitionEventsTable.detectedAt, new Date(maxDate + "T23:59:59Z")),
+      )
+    );
+
+  const statsMap = new Map<string, SessionStats>();
+  for (const evt of events) {
+    if (evt.employeeId == null) continue;
+    const dateStr = evt.detectedAt.toISOString().slice(0, 10);
+    const key = `${evt.employeeId}:${dateStr}`;
+    const s = statsMap.get(key) ?? { entryCount: 0, exitCount: 0 };
+    if (evt.zoneType === "entry") s.entryCount++;
+    else if (evt.zoneType === "exit") s.exitCount++;
+    statsMap.set(key, s);
+  }
+  return statsMap;
+}
+
 /* ── schedule join expression ── */
 const dayOfWeekExpr = sql<number>`EXTRACT(ISODOW FROM ${attendanceTable.date}::date)::int`;
 
@@ -176,11 +222,20 @@ router.get("/attendance", async (req, res): Promise<void> => {
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(attendanceTable.firstSeen);
 
+  const empIds = [...new Set(records.map((r) => r.employeeId))];
+  const dates = records.map((r) => (typeof r.date === "string" ? r.date : (r.date as Date).toISOString().slice(0, 10)));
+  const minDate = dates.length > 0 ? dates.reduce((a, b) => (a < b ? a : b)) : new Date().toISOString().slice(0, 10);
+  const maxDate = dates.length > 0 ? dates.reduce((a, b) => (a > b ? a : b)) : minDate;
+
+  const sessionsMap = await fetchSessionStats(empIds, minDate, maxDate);
+
   const result = records.map((r) => {
     const si = computeScheduleInfo(
       r.firstSeen, r.lastSeen,
       r.scheduleStartTime ?? null, r.scheduleEndTime ?? null,
     );
+    const dateStr = typeof r.date === "string" ? r.date : (r.date as Date).toISOString().slice(0, 10);
+    const sess = sessionsMap.get(`${r.employeeId}:${dateStr}`);
     return {
       ...r,
       scheduleStatus:  si.scheduleStatus,
@@ -189,6 +244,8 @@ router.get("/attendance", async (req, res): Promise<void> => {
       scheduleEnd:     si.scheduleEnd,
       earlyDeparture:  si.earlyDeparture,
       minutesEarly:    si.minutesEarly,
+      entryCount:      sess?.entryCount ?? null,
+      exitCount:       sess?.exitCount  ?? null,
     };
   });
 
