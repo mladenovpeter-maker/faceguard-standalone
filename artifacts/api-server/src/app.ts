@@ -5,6 +5,7 @@ import path from "path";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { getTokenData, extractBearerToken } from "./lib/auth-tokens";
+import { SNAPSHOTS_DIR } from "./lib/snapshot-store";
 
 const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
   ? path.resolve(process.cwd(), "../..")
@@ -48,7 +49,11 @@ const PUBLIC_PATHS = ["/api/healthz", "/api/auth/login", "/api/auth/me"];
 
 app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
   const fullPath = "/api" + req.path;
-  if (PUBLIC_PATHS.includes(fullPath) || fullPath.startsWith("/api/uploads")) {
+  if (
+    PUBLIC_PATHS.includes(fullPath) ||
+    fullPath.startsWith("/api/uploads") ||
+    fullPath.startsWith("/api/snapshots")
+  ) {
     next();
     return;
   }
@@ -61,6 +66,9 @@ app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
 
 /* ── Serve uploaded photos ── */
 app.use("/api/uploads", express.static(path.resolve(workspaceRoot, "artifacts/api-server/uploads")));
+
+/* ── Serve recognition snapshots (disk-based, 3-day retention) ── */
+app.use("/api/snapshots", express.static(SNAPSHOTS_DIR));
 
 app.use("/api", router);
 
