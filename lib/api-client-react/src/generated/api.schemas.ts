@@ -552,6 +552,10 @@ export interface AttendanceRecord {
   earlyDeparture?: boolean | null;
   /** @nullable */
   minutesEarly?: number | null;
+  /** @nullable */
+  entryCount?: number | null;
+  /** @nullable */
+  exitCount?: number | null;
 }
 
 /**
