@@ -544,6 +544,20 @@ paths:
           schema:
             type: string
             format: date
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: departmentId
+          in: query
+          schema:
+            type: ["integer", "null"]
         - name: employeeId
           in: query
           schema:
@@ -608,6 +622,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttendanceReport"
+
+  /attendance/form76:
+    get:
+      operationId: getAttendanceForm76
+      tags: [attendance]
+      summary: Monthly Form 76 attendance roster
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: departmentId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: employeeId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Form 76 monthly roster
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Form76Response"
 
   # LEAVES
   /leaves:
@@ -975,6 +1021,182 @@ paths:
                 items:
                   $ref: "#/components/schemas/EmployeePresence"
 
+  /api/visitors:
+    get:
+      operationId: listVisitors
+      tags: [visitors]
+      summary: List all visitors
+      responses:
+        "200":
+          description: Visitor list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Visitor"
+    post:
+      operationId: createVisitor
+      tags: [visitors]
+      summary: Create a visitor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisitorInput"
+      responses:
+        "201":
+          description: Created visitor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Visitor"
+
+  /api/visitors/{id}:
+    get:
+      operationId: getVisitor
+      tags: [visitors]
+      summary: Get a visitor by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Visitor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Visitor"
+    patch:
+      operationId: updateVisitor
+      tags: [visitors]
+      summary: Update a visitor
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisitorInput"
+      responses:
+        "200":
+          description: Updated visitor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Visitor"
+    delete:
+      operationId: deleteVisitor
+      tags: [visitors]
+      summary: Delete a visitor
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /api/visitors/{id}/visits:
+    get:
+      operationId: getVisitorVisits
+      tags: [visitors]
+      summary: List visits for a visitor
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Visit list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VisitorVisit"
+    post:
+      operationId: checkInVisitor
+      tags: [visitors]
+      summary: Check in a visitor
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisitorVisitInput"
+      responses:
+        "201":
+          description: Visit created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisitorVisit"
+
+  /api/visitors/{id}/visits/{visitId}:
+    patch:
+      operationId: updateVisitorVisit
+      tags: [visitors]
+      summary: Check out a visitor or update visit
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: visitId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisitorVisitInput"
+      responses:
+        "200":
+          description: Updated visit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisitorVisit"
+
+  /api/visitor-visits:
+    get:
+      operationId: listVisitorVisits
+      tags: [visitors]
+      summary: List recent visitor visits
+      responses:
+        "200":
+          description: Visit list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VisitorVisitWithInfo"
+
 components:
   schemas:
     HealthStatus:
@@ -1279,7 +1501,7 @@ components:
 
     Zone:
       type: object
-      required: [id, name, accessLevel, createdAt]
+      required: [id, name, accessLevel, zoneType, createdAt]
       properties:
         id:
           type: integer
@@ -1290,6 +1512,9 @@ components:
         accessLevel:
           type: string
           enum: [public, restricted, secure]
+        zoneType:
+          type: string
+          enum: [entry, exit, general]
         cameraCount:
           type: integer
         createdAt:
@@ -1308,6 +1533,9 @@ components:
         accessLevel:
           type: string
           enum: [public, restricted, secure]
+        zoneType:
+          type: string
+          enum: [entry, exit, general]
 
     ZoneUpdate:
       type: object
@@ -1319,6 +1547,9 @@ components:
         accessLevel:
           type: string
           enum: [public, restricted, secure]
+        zoneType:
+          type: string
+          enum: [entry, exit, general]
 
     AccessRule:
       type: object
@@ -1489,6 +1720,8 @@ components:
           type: ["string", "null"]
         employeePhotoUrl:
           type: ["string", "null"]
+        departmentName:
+          type: ["string", "null"]
         date:
           type: string
           format: date
@@ -1497,6 +1730,12 @@ components:
           format: date-time
         lastSeen:
           type: string
+          format: date-time
+        clockInAt:
+          type: ["string", "null"]
+          format: date-time
+        clockOutAt:
+          type: ["string", "null"]
           format: date-time
         zoneId:
           type: ["integer", "null"]
@@ -1511,6 +1750,16 @@ components:
           type: ["integer", "null"]
         scheduleStart:
           type: ["string", "null"]
+        scheduleEnd:
+          type: ["string", "null"]
+        earlyDeparture:
+          type: ["boolean", "null"]
+        minutesEarly:
+          type: ["integer", "null"]
+        entryCount:
+          type: ["integer", "null"]
+        exitCount:
+          type: ["integer", "null"]
 
     TodayAttendance:
       type: object
@@ -1741,3 +1990,145 @@ components:
           format: date-time
         totalMinutes:
           type: ["integer", "null"]
+
+    VisitorType:
+      type: string
+      enum: [supplier, carrier, client, guest, other]
+
+    Visitor:
+      type: object
+      required: [id, name, type, active, createdAt, updatedAt]
+      properties:
+        id:          { type: integer }
+        name:        { type: string }
+        company:     { type: ["string", "null"] }
+        type:        { $ref: "#/components/schemas/VisitorType" }
+        phone:       { type: ["string", "null"] }
+        email:       { type: ["string", "null"] }
+        photoUrl:    { type: ["string", "null"] }
+        cardNumber:  { type: ["string", "null"] }
+        notes:       { type: ["string", "null"] }
+        active:      { type: boolean }
+        createdAt:   { type: string, format: date-time }
+        updatedAt:   { type: string, format: date-time }
+
+    VisitorInput:
+      type: object
+      required: [name, type]
+      properties:
+        name:        { type: string }
+        company:     { type: ["string", "null"] }
+        type:        { $ref: "#/components/schemas/VisitorType" }
+        phone:       { type: ["string", "null"] }
+        email:       { type: ["string", "null"] }
+        photoUrl:    { type: ["string", "null"] }
+        cardNumber:  { type: ["string", "null"] }
+        notes:       { type: ["string", "null"] }
+        active:      { type: boolean }
+
+    VisitorVisit:
+      type: object
+      required: [id, visitorId, checkIn, createdAt]
+      properties:
+        id:          { type: integer }
+        visitorId:   { type: integer }
+        purpose:     { type: ["string", "null"] }
+        hostName:    { type: ["string", "null"] }
+        checkIn:     { type: string, format: date-time }
+        checkOut:    { type: ["string", "null"], format: date-time }
+        notes:       { type: ["string", "null"] }
+        createdAt:   { type: string, format: date-time }
+
+    VisitorVisitInput:
+      type: object
+      properties:
+        purpose:     { type: ["string", "null"] }
+        hostName:    { type: ["string", "null"] }
+        notes:       { type: ["string", "null"] }
+        checkOut:    { type: ["string", "null"], format: date-time }
+
+    VisitorVisitWithInfo:
+      type: object
+      required: [id, visitorId, checkIn]
+      properties:
+        id:             { type: integer }
+        visitorId:      { type: integer }
+        visitorName:    { type: ["string", "null"] }
+        visitorCompany: { type: ["string", "null"] }
+        visitorType:    { type: ["string", "null"] }
+        purpose:        { type: ["string", "null"] }
+        hostName:       { type: ["string", "null"] }
+        checkIn:        { type: string, format: date-time }
+        checkOut:       { type: ["string", "null"], format: date-time }
+        notes:          { type: ["string", "null"] }
+
+    Form76Day:
+      type: object
+      required: [day, code]
+      properties:
+        day:
+          type: integer
+        code:
+          type: string
+        hours:
+          type: ["number", "null"]
+        isReview:
+          type: boolean
+
+    Form76Row:
+      type: object
+      required: [employeeId, employeeName, employeeNumber, departmentName, days, totalDaysWorked, totalHours, normHours, overtime, nightHours]
+      properties:
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        employeeNumber:
+          type: string
+        employeePhotoUrl:
+          type: ["string", "null"]
+        departmentName:
+          type: string
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/Form76Day"
+        totalDaysWorked:
+          type: integer
+        totalHours:
+          type: number
+        normHours:
+          type: number
+        overtime:
+          type: number
+        nightHours:
+          type: number
+
+    Form76Response:
+      type: object
+      required: [year, month, daysInMonth, workingDays, normHours, totalEmployees, totalHours, totalOvertime, totalNightHours, reviewDays, rows]
+      properties:
+        year:
+          type: integer
+        month:
+          type: integer
+        daysInMonth:
+          type: integer
+        workingDays:
+          type: integer
+        normHours:
+          type: number
+        totalEmployees:
+          type: integer
+        totalHours:
+          type: number
+        totalOvertime:
+          type: number
+        totalNightHours:
+          type: number
+        reviewDays:
+          type: integer
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/Form76Row"
