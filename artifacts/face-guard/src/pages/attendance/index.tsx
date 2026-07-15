@@ -30,7 +30,12 @@ function formatHours(minutes: number | null | undefined): string {
 }
 
 function formatDate(dateVal: string | Date): string {
-  const d = dateVal instanceof Date ? dateVal : new Date(dateVal + "T12:00:00Z");
+  let d: Date;
+  if (dateVal instanceof Date) {
+    d = dateVal;
+  } else {
+    d = dateVal.includes("T") ? new Date(dateVal) : new Date(dateVal + "T12:00:00Z");
+  }
   if (isNaN(d.getTime())) return String(dateVal);
   return `${BG_WEEKDAYS[d.getUTCDay()]}, ${String(d.getUTCDate()).padStart(2, "0")}.${String(d.getUTCMonth() + 1).padStart(2, "0")}.${d.getUTCFullYear()}`;
 }
