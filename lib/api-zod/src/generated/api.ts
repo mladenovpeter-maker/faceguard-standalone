@@ -577,7 +577,9 @@ export const ListAttendanceResponseItem = zod.object({
   "scheduleStart": zod.string().nullish(),
   "scheduleEnd": zod.string().nullish(),
   "earlyDeparture": zod.boolean().nullish(),
-  "minutesEarly": zod.number().nullish()
+  "minutesEarly": zod.number().nullish(),
+  "entryCount": zod.number().nullish(),
+  "exitCount": zod.number().nullish()
 })
 export const ListAttendanceResponse = zod.array(ListAttendanceResponseItem)
 
@@ -611,7 +613,9 @@ export const GetTodayAttendanceResponse = zod.object({
   "scheduleStart": zod.string().nullish(),
   "scheduleEnd": zod.string().nullish(),
   "earlyDeparture": zod.boolean().nullish(),
-  "minutesEarly": zod.number().nullish()
+  "minutesEarly": zod.number().nullish(),
+  "entryCount": zod.number().nullish(),
+  "exitCount": zod.number().nullish()
 })),
   "absentRecords": zod.array(zod.object({
   "employeeId": zod.number(),
