@@ -164,6 +164,7 @@ export default function AttendancePage() {
                 <TableHead className="font-mono text-[10px] tracking-widest uppercase">Отдел</TableHead>
                 <TableHead className="font-mono text-[10px] tracking-widest uppercase text-right">Вход ↓</TableHead>
                 <TableHead className="font-mono text-[10px] tracking-widest uppercase text-right">Изход ↑</TableHead>
+                <TableHead className="font-mono text-[10px] tracking-widest uppercase text-center">Сесии</TableHead>
                 <TableHead className="font-mono text-[10px] tracking-widest uppercase text-right">Часове</TableHead>
                 <TableHead className="font-mono text-[10px] tracking-widest uppercase text-center">Закъснение</TableHead>
                 <TableHead className="font-mono text-[10px] tracking-widest uppercase text-center">Напускал</TableHead>
@@ -236,6 +237,19 @@ export default function AttendancePage() {
                       )}
                       {rec.scheduleEnd && (
                         <p className="text-[10px] text-muted-foreground font-mono text-right">{rec.scheduleEnd}</p>
+                      )}
+                    </TableCell>
+
+                    {/* Сесии */}
+                    <TableCell className="text-center min-w-[80px]">
+                      {(rec.entryCount != null || rec.exitCount != null) ? (
+                        <span className="font-mono text-xs text-muted-foreground">
+                          <span className="text-green-600 font-semibold">{rec.entryCount ?? 0}↓</span>
+                          {" / "}
+                          <span className="text-orange-500 font-semibold">{rec.exitCount ?? 0}↑</span>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
 
