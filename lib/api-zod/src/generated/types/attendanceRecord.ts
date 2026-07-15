@@ -16,9 +16,15 @@ export interface AttendanceRecord {
   employeeNumber?: string | null;
   /** @nullable */
   employeePhotoUrl?: string | null;
+  /** @nullable */
+  departmentName?: string | null;
   date: Date;
   firstSeen: Date;
   lastSeen: Date;
+  /** @nullable */
+  clockInAt?: Date | null;
+  /** @nullable */
+  clockOutAt?: Date | null;
   /** @nullable */
   zoneId?: number | null;
   /** @nullable */
@@ -31,4 +37,14 @@ export interface AttendanceRecord {
   minutesLate?: number | null;
   /** @nullable */
   scheduleStart?: string | null;
+  /** @nullable */
+  scheduleEnd?: string | null;
+  /** @nullable */
+  earlyDeparture?: boolean | null;
+  /** @nullable */
+  minutesEarly?: number | null;
+  /** @nullable */
+  entryCount?: number | null;
+  /** @nullable */
+  exitCount?: number | null;
 }
