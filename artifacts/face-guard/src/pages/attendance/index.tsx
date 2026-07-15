@@ -229,7 +229,11 @@ export default function AttendancePage() {
 
                     {/* Изход */}
                     <TableCell className="text-right min-w-[90px]">
-                      <span className="font-mono text-sm font-semibold text-orange-500">{formatTime(rec.lastSeen)}</span>
+                      {rec.lastSeen && rec.firstSeen && new Date(rec.lastSeen).getTime() !== new Date(rec.firstSeen).getTime() ? (
+                        <span className="font-mono text-sm font-semibold text-orange-500">{formatTime(rec.lastSeen)}</span>
+                      ) : (
+                        <span className="font-mono text-sm text-muted-foreground">—</span>
+                      )}
                       {rec.scheduleEnd && (
                         <p className="text-[10px] text-muted-foreground font-mono text-right">{rec.scheduleEnd}</p>
                       )}
