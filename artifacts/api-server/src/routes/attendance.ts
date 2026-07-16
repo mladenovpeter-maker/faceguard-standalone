@@ -129,11 +129,19 @@ function computeScheduleInfo(
 
 /* ── session stats from recognition events ── */
 
+interface AttendanceSession {
+  entryAt: string | null;
+  exitAt:  string | null;
+  insideMinutes: number;
+  breakAfterMinutes: number | null; // break until next entry, null if last session
+}
+
 interface SessionStats {
   entryCount: number;
   exitCount: number;
-  netMinutes: number;    // sum of paired entry→exit durations
-  breakMinutes: number;  // sum of paired exit→entry durations
+  netMinutes: number;
+  breakMinutes: number;
+  sessions: AttendanceSession[];
 }
 
 function computeSessionStats(
@@ -146,6 +154,8 @@ function computeSessionStats(
   let lastEntry: Date | null = null;
   let lastExit: Date | null = null;
   let inside = false;
+
+  const sessions: { entryAt: Date | null; exitAt: Date | null; insideMinutes: number }[] = [];
 
   const sorted = [...events].sort((a, b) => a.detectedAt.getTime() - b.detectedAt.getTime());
 
@@ -162,7 +172,9 @@ function computeSessionStats(
     } else if (evt.zoneType === "exit") {
       exitCount++;
       if (inside && lastEntry !== null) {
-        netMinutes += Math.round((evt.detectedAt.getTime() - lastEntry.getTime()) / 60000);
+        const mins = Math.round((evt.detectedAt.getTime() - lastEntry.getTime()) / 60000);
+        netMinutes += mins;
+        sessions.push({ entryAt: lastEntry, exitAt: evt.detectedAt, insideMinutes: mins });
         lastEntry = null;
         inside = false;
         lastExit = evt.detectedAt;
@@ -172,7 +184,26 @@ function computeSessionStats(
     }
   }
 
-  return { entryCount, exitCount, netMinutes, breakMinutes };
+  // Open session (still inside at time of query)
+  if (inside && lastEntry !== null) {
+    sessions.push({ entryAt: lastEntry, exitAt: null, insideMinutes: 0 });
+  }
+
+  // Attach breakAfterMinutes to each session
+  const sessionsOut: AttendanceSession[] = sessions.map((s, i) => {
+    const next = sessions[i + 1];
+    const breakAfter = (s.exitAt && next?.entryAt)
+      ? Math.round((next.entryAt.getTime() - s.exitAt.getTime()) / 60000)
+      : null;
+    return {
+      entryAt:           s.entryAt ? s.entryAt.toISOString() : null,
+      exitAt:            s.exitAt  ? s.exitAt.toISOString()  : null,
+      insideMinutes:     s.insideMinutes,
+      breakAfterMinutes: breakAfter,
+    };
+  });
+
+  return { entryCount, exitCount, netMinutes, breakMinutes, sessions: sessionsOut };
 }
 
 async function fetchSessionStats(
@@ -223,6 +254,20 @@ async function fetchSessionStats(
 const dayOfWeekExpr = sql<number>`EXTRACT(ISODOW FROM ${attendanceTable.date}::date)::int`;
 
 /* ── routes ── */
+
+/* GET /api/attendance/sessions?employeeId=X&date=YYYY-MM-DD */
+router.get("/attendance/sessions", async (req, res): Promise<void> => {
+  const { employeeId: empIdRaw, date } = req.query as Record<string, string | undefined>;
+  if (!empIdRaw || !date) {
+    res.status(400).json({ error: "employeeId и date са задължителни" });
+    return;
+  }
+  const empId = Number(empIdRaw);
+  const sessionsMap = await fetchSessionStats([empId], date, date);
+  const key = `${empId}:${date}`;
+  const stats = sessionsMap.get(key);
+  res.json({ sessions: stats?.sessions ?? [] });
+});
 
 router.get("/attendance", async (req, res): Promise<void> => {
   const raw = req.query as Record<string, string | undefined>;
