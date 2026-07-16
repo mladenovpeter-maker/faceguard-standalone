@@ -47,4 +47,8 @@ export interface AttendanceRecord {
   entryCount?: number | null;
   /** @nullable */
   exitCount?: number | null;
+  /** @nullable */
+  netMinutes?: number | null;
+  /** @nullable */
+  breakMinutes?: number | null;
 }
