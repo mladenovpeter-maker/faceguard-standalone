@@ -243,7 +243,7 @@ export default function AttendancePage() {
                     {/* Сесии */}
                     <TableCell className="text-center min-w-[80px]">
                       {(rec.entryCount != null || rec.exitCount != null) ? (
-                        <span className="font-mono text-xs text-muted-foreground">
+                        <span className="font-mono text-xs">
                           <span className="text-green-600 font-semibold">{rec.entryCount ?? 0}↓</span>
                           {" / "}
                           <span className="text-orange-500 font-semibold">{rec.exitCount ?? 0}↑</span>
@@ -254,8 +254,17 @@ export default function AttendancePage() {
                     </TableCell>
 
                     {/* Часове */}
-                    <TableCell className="text-right min-w-[80px]">
-                      <span className="font-mono text-sm font-bold">{formatHours(rec.totalMinutes)}</span>
+                    <TableCell className="text-right min-w-[90px]">
+                      {rec.netMinutes != null && rec.netMinutes > 0 ? (
+                        <>
+                          <span className="font-mono text-sm font-bold text-indigo-600">{formatHours(rec.netMinutes)}</span>
+                          {rec.breakMinutes != null && rec.breakMinutes > 0 && (
+                            <p className="text-[10px] text-muted-foreground font-mono text-right">пауза {formatHours(rec.breakMinutes)}</p>
+                          )}
+                        </>
+                      ) : (
+                        <span className="font-mono text-sm font-bold">{formatHours(rec.totalMinutes)}</span>
+                      )}
                     </TableCell>
 
                     {/* Закъснение */}
