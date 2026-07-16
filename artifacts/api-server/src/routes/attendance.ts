@@ -132,6 +132,47 @@ function computeScheduleInfo(
 interface SessionStats {
   entryCount: number;
   exitCount: number;
+  netMinutes: number;    // sum of paired entry→exit durations
+  breakMinutes: number;  // sum of paired exit→entry durations
+}
+
+function computeSessionStats(
+  events: { detectedAt: Date; zoneType: string }[],
+): SessionStats {
+  let entryCount = 0;
+  let exitCount = 0;
+  let netMinutes = 0;
+  let breakMinutes = 0;
+  let lastEntry: Date | null = null;
+  let lastExit: Date | null = null;
+  let inside = false;
+
+  const sorted = [...events].sort((a, b) => a.detectedAt.getTime() - b.detectedAt.getTime());
+
+  for (const evt of sorted) {
+    if (evt.zoneType === "entry") {
+      entryCount++;
+      if (!inside) {
+        if (lastExit !== null) {
+          breakMinutes += Math.round((evt.detectedAt.getTime() - lastExit.getTime()) / 60000);
+        }
+        inside = true;
+        lastEntry = evt.detectedAt;
+      }
+    } else if (evt.zoneType === "exit") {
+      exitCount++;
+      if (inside && lastEntry !== null) {
+        netMinutes += Math.round((evt.detectedAt.getTime() - lastEntry.getTime()) / 60000);
+        lastEntry = null;
+        inside = false;
+        lastExit = evt.detectedAt;
+      } else if (!inside) {
+        lastExit = evt.detectedAt;
+      }
+    }
+  }
+
+  return { entryCount, exitCount, netMinutes, breakMinutes };
 }
 
 async function fetchSessionStats(
@@ -157,17 +198,23 @@ async function fetchSessionStats(
         gte(recognitionEventsTable.detectedAt, new Date(minDate + "T00:00:00Z")),
         lte(recognitionEventsTable.detectedAt, new Date(maxDate + "T23:59:59Z")),
       )
-    );
+    )
+    .orderBy(recognitionEventsTable.detectedAt);
 
-  const statsMap = new Map<string, SessionStats>();
+  // Group events by employeeId:date
+  const grouped = new Map<string, { detectedAt: Date; zoneType: string }[]>();
   for (const evt of events) {
     if (evt.employeeId == null) continue;
     const dateStr = evt.detectedAt.toISOString().slice(0, 10);
     const key = `${evt.employeeId}:${dateStr}`;
-    const s = statsMap.get(key) ?? { entryCount: 0, exitCount: 0 };
-    if (evt.zoneType === "entry") s.entryCount++;
-    else if (evt.zoneType === "exit") s.exitCount++;
-    statsMap.set(key, s);
+    const arr = grouped.get(key) ?? [];
+    arr.push({ detectedAt: evt.detectedAt, zoneType: evt.zoneType });
+    grouped.set(key, arr);
+  }
+
+  const statsMap = new Map<string, SessionStats>();
+  for (const [key, evts] of grouped) {
+    statsMap.set(key, computeSessionStats(evts));
   }
   return statsMap;
 }
@@ -244,8 +291,10 @@ router.get("/attendance", async (req, res): Promise<void> => {
       scheduleEnd:     si.scheduleEnd,
       earlyDeparture:  si.earlyDeparture,
       minutesEarly:    si.minutesEarly,
-      entryCount:      sess?.entryCount ?? null,
-      exitCount:       sess?.exitCount  ?? null,
+      entryCount:      sess?.entryCount  ?? null,
+      exitCount:       sess?.exitCount   ?? null,
+      netMinutes:      sess?.netMinutes  ?? null,
+      breakMinutes:    sess?.breakMinutes ?? null,
     };
   });
 
