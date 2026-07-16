@@ -1,114 +1,117 @@
 # Standalone self-hosted FaceGuard stack: Postgres + API server + camera
-# ingestion worker + web frontend. Run from the REPO ROOT:
-#
-#   cp selfhost/.env.example selfhost/.env   # then edit it
-#   docker compose -f selfhost/docker-compose.yml --env-file selfhost/.env up --build
-#
-# See selfhost/README.md for full setup instructions.
+  # ingestion worker + web frontend. Run from the REPO ROOT:
+  #
+  #   cp selfhost/.env.example selfhost/.env   # then edit it
+  #   docker compose -f selfhost/docker-compose.yml --env-file selfhost/.env up --build
+  #
+  # See selfhost/README.md for full setup instructions.
 
-services:
-  face-ai:
-    build:
-      context: ..
-      dockerfile: selfhost/Dockerfile.face-ai
-    restart: unless-stopped
-    environment:
-      DET_SIZE: "${FACE_AI_DET_SIZE:-640}"
-      MIN_FACE_SCORE: "${FACE_AI_MIN_SCORE:-0.5}"
-    volumes:
-      - faceguard-models:/root/.insightface
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\" 2>/dev/null"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 120s
+  services:
+    face-ai:
+      build:
+        context: ..
+        dockerfile: selfhost/Dockerfile.face-ai
+      restart: unless-stopped
+      environment:
+        DET_SIZE: "${FACE_AI_DET_SIZE:-640}"
+        MIN_FACE_SCORE: "${FACE_AI_MIN_SCORE:-0.5}"
+      volumes:
+        - faceguard-models:/root/.insightface
+      healthcheck:
+        test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\" 2>/dev/null"]
+        interval: 10s
+        timeout: 5s
+        retries: 10
+        start_period: 120s
 
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: faceguard
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-faceguard}
-      POSTGRES_DB: faceguard
-    volumes:
-      - faceguard-db-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U faceguard"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+    postgres:
+      image: postgres:16-alpine
+      restart: unless-stopped
+      environment:
+        POSTGRES_USER: faceguard
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-faceguard}
+        POSTGRES_DB: faceguard
+      volumes:
+        - faceguard-db-data:/var/lib/postgresql/data
+      ports:
+        - "5432:5432"
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U faceguard"]
+        interval: 5s
+        timeout: 5s
+        retries: 10
 
-  api-server:
-    build:
-      context: ..
-      dockerfile: selfhost/Dockerfile.api-server
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      face-ai:
-        condition: service_healthy
-    environment:
-      PORT: "8080"
-      NODE_ENV: production
-      DATABASE_URL: postgres://faceguard:${POSTGRES_PASSWORD:-faceguard}@postgres:5432/faceguard
-      FACE_AI_URL: http://face-ai:5000
-      FACE_MATCH_THRESHOLD: "${FACE_MATCH_THRESHOLD:-0.40}"
-    volumes:
-      - faceguard-uploads:/app/artifacts/api-server/uploads
-      - faceguard-snapshots:/app/snapshots
-    ports:
-      - "8080:8080"
+    api-server:
+      build:
+        context: ..
+        dockerfile: selfhost/Dockerfile.api-server
+      restart: unless-stopped
+      depends_on:
+        postgres:
+          condition: service_healthy
+        face-ai:
+          condition: service_healthy
+      environment:
+        PORT: "8080"
+        NODE_ENV: production
+        DATABASE_URL: postgres://faceguard:${POSTGRES_PASSWORD:-faceguard}@postgres:5432/faceguard
+        FACE_AI_URL: http://face-ai:5000
+        FACE_MATCH_THRESHOLD: "${FACE_MATCH_THRESHOLD:-0.40}"
+        TZ: Europe/Sofia
+      volumes:
+        - faceguard-uploads:/app/artifacts/api-server/uploads
+        - faceguard-snapshots:/app/snapshots
+      ports:
+        - "8080:8080"
 
-  camera-worker:
-    build:
-      context: ..
-      dockerfile: selfhost/Dockerfile.api-server
-    restart: unless-stopped
-    depends_on:
-      - api-server
-    environment:
-      DATABASE_URL: postgres://faceguard:${POSTGRES_PASSWORD:-faceguard}@postgres:5432/faceguard
-      CAMERA_WORKER_API_URL: http://api-server:8080
-      CAMERA_WORKER_USERNAME: ${CAMERA_WORKER_USERNAME:-admin}
-      CAMERA_WORKER_PASSWORD: ${CAMERA_WORKER_PASSWORD}
-      CAMERA_WORKER_POLL_INTERVAL_MS: ${CAMERA_WORKER_POLL_INTERVAL_MS:-5000}
-      FACE_AI_URL: http://face-ai:5000
-    command: ["node", "--enable-source-maps", "dist/worker/camera-ingest.mjs"]
+    camera-worker:
+      build:
+        context: ..
+        dockerfile: selfhost/Dockerfile.api-server
+      restart: unless-stopped
+      depends_on:
+        - api-server
+      environment:
+        DATABASE_URL: postgres://faceguard:${POSTGRES_PASSWORD:-faceguard}@postgres:5432/faceguard
+        CAMERA_WORKER_API_URL: http://api-server:8080
+        CAMERA_WORKER_USERNAME: ${CAMERA_WORKER_USERNAME:-admin}
+        CAMERA_WORKER_PASSWORD: ${CAMERA_WORKER_PASSWORD}
+        CAMERA_WORKER_POLL_INTERVAL_MS: ${CAMERA_WORKER_POLL_INTERVAL_MS:-5000}
+        FACE_AI_URL: http://face-ai:5000
+        TZ: Europe/Sofia
+      command: ["node", "--enable-source-maps", "dist/worker/camera-ingest.mjs"]
 
-  face-guard:
-    build:
-      context: ..
-      dockerfile: selfhost/Dockerfile.face-guard
-    restart: unless-stopped
-    depends_on:
-      - api-server
-    ports:
-      - "8081:80"
+    face-guard:
+      build:
+        context: ..
+        dockerfile: selfhost/Dockerfile.face-guard
+      restart: unless-stopped
+      depends_on:
+        - api-server
+      ports:
+        - "8081:80"
 
-  mcp-server:
-    build:
-      context: ..
-      dockerfile: selfhost/Dockerfile.mcp-server
-    restart: unless-stopped
-    ports:
-      - "9100:9100"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${REPO_PATH:-/home/tmm/faceguard-standalone}:/workspace
+    mcp-server:
+      build:
+        context: ..
+        dockerfile: selfhost/Dockerfile.mcp-server
+      restart: unless-stopped
+      ports:
+        - "9100:9100"
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - ${REPO_PATH:-/home/tmm/faceguard-standalone}:/workspace
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - face-guard
+    cloudflared:
+      image: cloudflare/cloudflared:latest
+      restart: unless-stopped
+      command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+      depends_on:
+        - face-guard
 
-volumes:
-  faceguard-db-data:
-  faceguard-uploads:
-  faceguard-snapshots:
-  faceguard-models:
+  volumes:
+    faceguard-db-data:
+    faceguard-uploads:
+    faceguard-snapshots:
+    faceguard-models:
+  
