@@ -1760,6 +1760,10 @@ components:
           type: ["integer", "null"]
         exitCount:
           type: ["integer", "null"]
+        netMinutes:
+          type: ["integer", "null"]
+        breakMinutes:
+          type: ["integer", "null"]
 
     TodayAttendance:
       type: object
