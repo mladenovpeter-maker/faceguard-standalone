@@ -389,9 +389,17 @@ router.get("/attendance/today", async (_req, res): Promise<void> => {
       photoUrl: employeesTable.photoUrl,
       departmentName: departmentsTable.name,
       position: employeesTable.position,
+      scheduleStart: departmentWorkSchedulesTable.startTime,
     })
     .from(employeesTable)
     .leftJoin(departmentsTable, eq(departmentsTable.id, employeesTable.departmentId))
+    .leftJoin(
+      departmentWorkSchedulesTable,
+      and(
+        eq(departmentWorkSchedulesTable.departmentId, employeesTable.departmentId!),
+        eq(departmentWorkSchedulesTable.dayOfWeek, dayOfWeekExpr),
+      )
+    )
     .where(eq(employeesTable.status, "active"));
 
   const activeLeaves = await db
@@ -407,8 +415,17 @@ router.get("/attendance/today", async (_req, res): Promise<void> => {
 
   const leaveByEmployee = new Map(activeLeaves.map((l) => [l.employeeId, l]));
 
+  // Current local time as "HH:MM" for schedule comparison (uses server system timezone)
+  const _now = new Date();
+  const nowTime = `${String(_now.getHours()).padStart(2, "0")}:${String(_now.getMinutes()).padStart(2, "0")}`;
+
   const absentRecords = allActive
-    .filter((emp) => !presentIds.has(emp.id))
+    .filter((emp) => {
+      if (presentIds.has(emp.id)) return false;
+      // If employee has a schedule and the shift hasn't started yet, don't show as absent
+      if (emp.scheduleStart && nowTime < emp.scheduleStart) return false;
+      return true;
+    })
     .map((emp) => {
       const leave = leaveByEmployee.get(emp.id);
       return {
@@ -426,7 +443,11 @@ router.get("/attendance/today", async (_req, res): Promise<void> => {
       };
     });
 
-  const totalEmployees = allActive.length;
+  // Only count employees whose shift has already started (or have no schedule)
+  const shiftStartedCount = allActive.filter(
+    (emp) => !emp.scheduleStart || nowTime >= emp.scheduleStart
+  ).length;
+  const totalEmployees = shiftStartedCount;
   const presentCount = records.length;
   const onLeaveCount = absentRecords.filter((r) => r.leaveId !== null).length;
   const absentCount = Math.max(0, totalEmployees - presentCount);
