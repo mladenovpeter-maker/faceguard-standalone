@@ -104,16 +104,21 @@ function computeScheduleInfo(
   let earlyDeparture: boolean | null = null;
   let minutesEarly:   number | null  = null;
   if (scheduleEndTime && lastSeen) {
-    const dLast = new Date(lastSeen);
-    const actualEndMin = dLast.getHours() * 60 + dLast.getMinutes();
-    const schedEndMin  = toMin(scheduleEndTime);
-    const diffEarly    = schedEndMin - actualEndMin;
-    if (diffEarly > EARLY_GRACE_MINUTES) {
-      earlyDeparture = true;
-      minutesEarly   = diffEarly;
-    } else {
-      earlyDeparture = false;
-      minutesEarly   = 0;
+    const dFirst = new Date(firstSeen);
+    const dLast  = new Date(lastSeen);
+    // If lastSeen is within 1 minute of firstSeen the person hasn't exited — skip
+    const stillInside = Math.abs(dLast.getTime() - dFirst.getTime()) < 60_000;
+    if (!stillInside) {
+      const actualEndMin = dLast.getHours() * 60 + dLast.getMinutes();
+      const schedEndMin  = toMin(scheduleEndTime);
+      const diffEarly    = schedEndMin - actualEndMin;
+      if (diffEarly > EARLY_GRACE_MINUTES) {
+        earlyDeparture = true;
+        minutesEarly   = diffEarly;
+      } else {
+        earlyDeparture = false;
+        minutesEarly   = 0;
+      }
     }
   }
 
