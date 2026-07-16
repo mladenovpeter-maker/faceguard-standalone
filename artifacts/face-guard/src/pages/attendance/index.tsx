@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Users, UserCheck, UserX, Clock, Calendar, Download, AlertTriangle,
+  ChevronDown, ChevronUp, LogIn, LogOut, Coffee,
 } from "lucide-react";
 import { useListAttendance, useGetTodayAttendance } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,14 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/auth";
+
+interface AttendanceSession {
+  entryAt: string | null;
+  exitAt:  string | null;
+  insideMinutes: number;
+  breakAfterMinutes: number | null;
+}
 
 const today = new Date().toISOString().slice(0, 10);
 const BG_WEEKDAYS = ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
@@ -70,8 +79,27 @@ function StatCard({
 export default function AttendancePage() {
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate]     = useState(today);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [sessionsCache, setSessionsCache] = useState<Record<string, AttendanceSession[] | "loading">>({});
 
   const isToday = fromDate === today && toDate === today;
+
+  const toggleRow = useCallback(async (employeeId: number, date: string) => {
+    const key = `${employeeId}:${date}`;
+    if (expandedRow === key) {
+      setExpandedRow(null);
+      return;
+    }
+    setExpandedRow(key);
+    if (sessionsCache[key]) return;
+    setSessionsCache(prev => ({ ...prev, [key]: "loading" }));
+    try {
+      const data = await apiFetch(`/api/attendance/sessions?employeeId=${employeeId}&date=${date}`);
+      setSessionsCache(prev => ({ ...prev, [key]: (data as any).sessions ?? [] }));
+    } catch {
+      setSessionsCache(prev => ({ ...prev, [key]: [] }));
+    }
+  }, [expandedRow, sessionsCache]);
 
   const { data: todayData } = useGetTodayAttendance();
   const { data: records = [], isLoading } = useListAttendance({ from: fromDate, to: toDate });
@@ -185,125 +213,201 @@ export default function AttendancePage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                records.map((rec) => (
-                  <TableRow key={rec.id} className="hover:bg-muted/30 transition-colors">
-                    {/* Работник */}
-                    <TableCell className="min-w-[200px]">
-                      <div className="flex items-center gap-2.5">
-                        <Avatar className="h-8 w-8 shrink-0">
-                          <AvatarImage src={rec.employeePhotoUrl ?? undefined} />
-                          <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
-                            {(rec.employeeName ?? "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium text-sm leading-tight">{rec.employeeName ?? "—"}</p>
-                          {rec.employeeNumber && (
-                            <p className="text-[11px] text-muted-foreground font-mono">№{rec.employeeNumber}</p>
-                          )}
+                records.flatMap((rec) => {
+                  const rowKey = `${rec.employeeId}:${rec.date}`;
+                  const isExpanded = expandedRow === rowKey;
+                  const hasSessions = (rec.entryCount ?? 0) > 0 || (rec.exitCount ?? 0) > 0;
+                  const sessionsData = sessionsCache[rowKey];
+
+                  return [
+                    <TableRow
+                      key={rec.id}
+                      className={cn("hover:bg-muted/30 transition-colors", isExpanded && "bg-muted/20")}
+                    >
+                      {/* Работник */}
+                      <TableCell className="min-w-[200px]">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="h-8 w-8 shrink-0">
+                            <AvatarImage src={rec.employeePhotoUrl ?? undefined} />
+                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
+                              {(rec.employeeName ?? "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-sm leading-tight">{rec.employeeName ?? "—"}</p>
+                            {rec.employeeNumber && (
+                              <p className="text-[11px] text-muted-foreground font-mono">№{rec.employeeNumber}</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
+                      </TableCell>
 
-                    {/* Дата */}
-                    <TableCell className="min-w-[140px]">
-                      <p className="text-xs font-mono">{formatDate(rec.date)}</p>
-                      {rec.date === today && (
-                        <Badge variant="outline" className="text-[9px] font-mono mt-0.5 px-1 py-0 h-3.5 border-blue-400 text-blue-500 leading-none">
-                          Днес
-                        </Badge>
-                      )}
-                    </TableCell>
+                      {/* Дата */}
+                      <TableCell className="min-w-[140px]">
+                        <p className="text-xs font-mono">{formatDate(rec.date)}</p>
+                        {rec.date === today && (
+                          <Badge variant="outline" className="text-[9px] font-mono mt-0.5 px-1 py-0 h-3.5 border-blue-400 text-blue-500 leading-none">
+                            Днес
+                          </Badge>
+                        )}
+                      </TableCell>
 
-                    {/* Отдел */}
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">{rec.departmentName ?? "—"}</span>
-                    </TableCell>
+                      {/* Отдел */}
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">{rec.departmentName ?? "—"}</span>
+                      </TableCell>
 
-                    {/* Вход */}
-                    <TableCell className="text-right min-w-[90px]">
-                      <span className="font-mono text-sm font-semibold text-green-600">{formatTime(rec.firstSeen)}</span>
-                      {rec.scheduleStart && (
-                        <p className="text-[10px] text-muted-foreground font-mono text-right">{rec.scheduleStart}</p>
-                      )}
-                    </TableCell>
+                      {/* Вход */}
+                      <TableCell className="text-right min-w-[90px]">
+                        <span className="font-mono text-sm font-semibold text-green-600">{formatTime(rec.firstSeen)}</span>
+                        {rec.scheduleStart && (
+                          <p className="text-[10px] text-muted-foreground font-mono text-right">{rec.scheduleStart}</p>
+                        )}
+                      </TableCell>
 
-                    {/* Изход */}
-                    <TableCell className="text-right min-w-[90px]">
-                      {rec.lastSeen && rec.firstSeen && formatTime(rec.lastSeen) !== formatTime(rec.firstSeen) ? (
-                        <span className="font-mono text-sm font-semibold text-orange-500">{formatTime(rec.lastSeen)}</span>
-                      ) : (
-                        <span className="font-mono text-sm text-muted-foreground">—</span>
-                      )}
-                      {rec.scheduleEnd && (
-                        <p className="text-[10px] text-muted-foreground font-mono text-right">{rec.scheduleEnd}</p>
-                      )}
-                    </TableCell>
+                      {/* Изход */}
+                      <TableCell className="text-right min-w-[90px]">
+                        {rec.lastSeen && rec.firstSeen && formatTime(rec.lastSeen) !== formatTime(rec.firstSeen) ? (
+                          <span className="font-mono text-sm font-semibold text-orange-500">{formatTime(rec.lastSeen)}</span>
+                        ) : (
+                          <span className="font-mono text-sm text-muted-foreground">—</span>
+                        )}
+                        {rec.scheduleEnd && (
+                          <p className="text-[10px] text-muted-foreground font-mono text-right">{rec.scheduleEnd}</p>
+                        )}
+                      </TableCell>
 
-                    {/* Сесии */}
-                    <TableCell className="text-center min-w-[80px]">
-                      {(rec.entryCount != null || rec.exitCount != null) ? (
-                        <span className="font-mono text-xs">
-                          <span className="text-green-600 font-semibold">{rec.entryCount ?? 0}↓</span>
-                          {" / "}
-                          <span className="text-orange-500 font-semibold">{rec.exitCount ?? 0}↑</span>
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
-                      )}
-                    </TableCell>
+                      {/* Сесии — clickable */}
+                      <TableCell className="text-center min-w-[80px]">
+                        {hasSessions ? (
+                          <button
+                            onClick={() => toggleRow(rec.employeeId!, rec.date)}
+                            className="inline-flex items-center gap-1 font-mono text-xs rounded px-1.5 py-0.5 hover:bg-muted transition-colors cursor-pointer"
+                          >
+                            <span className="text-green-600 font-semibold">{rec.entryCount ?? 0}↓</span>
+                            <span className="text-muted-foreground">/</span>
+                            <span className="text-orange-500 font-semibold">{rec.exitCount ?? 0}↑</span>
+                            {isExpanded
+                              ? <ChevronUp className="h-3 w-3 text-muted-foreground ml-0.5" />
+                              : <ChevronDown className="h-3 w-3 text-muted-foreground ml-0.5" />
+                            }
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </TableCell>
 
-                    {/* Часове */}
-                    <TableCell className="text-right min-w-[90px]">
-                      {rec.netMinutes != null && rec.netMinutes > 0 ? (
-                        <>
-                          <span className="font-mono text-sm font-bold text-indigo-600">{formatHours(rec.netMinutes)}</span>
-                          {rec.breakMinutes != null && rec.breakMinutes > 0 && (
-                            <p className="text-[10px] text-muted-foreground font-mono text-right">пауза {formatHours(rec.breakMinutes)}</p>
-                          )}
-                        </>
-                      ) : (
-                        <span className="font-mono text-sm font-bold">{formatHours(rec.totalMinutes)}</span>
-                      )}
-                    </TableCell>
+                      {/* Часове */}
+                      <TableCell className="text-right min-w-[90px]">
+                        {rec.netMinutes != null && rec.netMinutes > 0 ? (
+                          <>
+                            <span className="font-mono text-sm font-bold text-indigo-600">{formatHours(rec.netMinutes)}</span>
+                            {rec.breakMinutes != null && rec.breakMinutes > 0 && (
+                              <p className="text-[10px] text-muted-foreground font-mono text-right">пауза {formatHours(rec.breakMinutes)}</p>
+                            )}
+                          </>
+                        ) : (
+                          <span className="font-mono text-sm font-bold">{formatHours(rec.totalMinutes)}</span>
+                        )}
+                      </TableCell>
 
-                    {/* Закъснение */}
-                    <TableCell className="text-center min-w-[110px]">
-                      {rec.scheduleStatus === "late" ? (
-                        <Badge variant="destructive" className="font-mono text-[10px] gap-1 px-2">
-                          <AlertTriangle className="h-2.5 w-2.5" />
-                          Закъснял {rec.minutesLate}м
-                        </Badge>
-                      ) : rec.scheduleStatus === "on_time" ? (
+                      {/* Закъснение */}
+                      <TableCell className="text-center min-w-[110px]">
+                        {rec.scheduleStatus === "late" ? (
+                          <Badge variant="destructive" className="font-mono text-[10px] gap-1 px-2">
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                            Закъснял {rec.minutesLate}м
+                          </Badge>
+                        ) : rec.scheduleStatus === "on_time" ? (
+                          <Badge variant="outline" className="font-mono text-[10px] text-green-700 border-green-400 bg-green-50">
+                            Навреме
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </TableCell>
+
+                      {/* Напускал */}
+                      <TableCell className="text-center min-w-[90px]">
+                        {rec.earlyDeparture === true ? (
+                          <Badge className="font-mono text-[10px] bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-100">
+                            Рано {rec.minutesEarly}м
+                          </Badge>
+                        ) : rec.earlyDeparture === false ? (
+                          <span className="text-sm text-muted-foreground font-mono">Не</span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </TableCell>
+
+                      {/* Статус */}
+                      <TableCell className="text-center min-w-[100px]">
                         <Badge variant="outline" className="font-mono text-[10px] text-green-700 border-green-400 bg-green-50">
-                          Навреме
+                          ● Присъства
                         </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
-                      )}
-                    </TableCell>
+                      </TableCell>
+                    </TableRow>,
 
-                    {/* Напускал */}
-                    <TableCell className="text-center min-w-[90px]">
-                      {rec.earlyDeparture === true ? (
-                        <Badge className="font-mono text-[10px] bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-100">
-                          Рано {rec.minutesEarly}м
-                        </Badge>
-                      ) : rec.earlyDeparture === false ? (
-                        <span className="text-sm text-muted-foreground font-mono">Не</span>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
-                      )}
-                    </TableCell>
-
-                    {/* Статус */}
-                    <TableCell className="text-center min-w-[100px]">
-                      <Badge variant="outline" className="font-mono text-[10px] text-green-700 border-green-400 bg-green-50">
-                        ● Присъства
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
+                    /* ── Expandable sessions sub-row ── */
+                    isExpanded && (
+                      <TableRow key={`${rec.id}-sessions`} className="bg-indigo-50/60 hover:bg-indigo-50/60">
+                        <TableCell colSpan={10} className="py-3 px-6">
+                          {sessionsData === "loading" ? (
+                            <p className="text-xs text-muted-foreground font-mono animate-pulse">Зареждане на сесии...</p>
+                          ) : !sessionsData || sessionsData.length === 0 ? (
+                            <p className="text-xs text-muted-foreground font-mono">Няма сесии</p>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <p className="text-[10px] font-mono uppercase tracking-widest text-indigo-500 font-semibold mb-1">
+                                Детайли по сесии — {sessionsData.length} влизане{sessionsData.length !== 1 ? "я" : ""}
+                              </p>
+                              {sessionsData.map((s, idx) => (
+                                <div key={idx} className="flex flex-col gap-1">
+                                  {/* Session row */}
+                                  <div className="flex items-center gap-3 bg-white rounded-md border border-indigo-100 px-3 py-2 text-sm w-fit min-w-[340px]">
+                                    {/* Entry */}
+                                    <div className="flex items-center gap-1.5">
+                                      <LogIn className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                                      <span className="font-mono font-semibold text-green-700">
+                                        {s.entryAt ? formatTime(s.entryAt) : "—"}
+                                      </span>
+                                    </div>
+                                    <span className="text-muted-foreground">→</span>
+                                    {/* Exit */}
+                                    <div className="flex items-center gap-1.5">
+                                      <LogOut className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                                      {s.exitAt ? (
+                                        <span className="font-mono font-semibold text-orange-600">{formatTime(s.exitAt)}</span>
+                                      ) : (
+                                        <span className="font-mono text-xs text-indigo-500 italic">все още вътре</span>
+                                      )}
+                                    </div>
+                                    {/* Duration */}
+                                    {s.exitAt && s.insideMinutes > 0 && (
+                                      <>
+                                        <span className="text-muted-foreground/40">|</span>
+                                        <span className="font-mono text-xs font-bold text-indigo-700">
+                                          {formatHours(s.insideMinutes)} вътре
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                  {/* Break after this session */}
+                                  {s.breakAfterMinutes != null && s.breakAfterMinutes > 0 && (
+                                    <div className="flex items-center gap-1.5 pl-4 text-[11px] font-mono text-muted-foreground">
+                                      <Coffee className="h-3 w-3 text-amber-400" />
+                                      <span>пауза {formatHours(s.breakAfterMinutes)}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ),
+                  ].filter(Boolean);
+                })
               )}
             </TableBody>
           </Table>
