@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, Fragment } from "react";
 import {
   Users, UserCheck, UserX, Clock, Calendar, Download, AlertTriangle,
   ChevronDown, ChevronUp, LogIn, LogOut, Coffee,
@@ -213,15 +213,15 @@ export default function AttendancePage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                records.flatMap((rec) => {
+                records.map((rec) => {
                   const rowKey = `${rec.employeeId}:${rec.date}`;
                   const isExpanded = expandedRow === rowKey;
                   const hasSessions = (rec.entryCount ?? 0) > 0 || (rec.exitCount ?? 0) > 0;
                   const sessionsData = sessionsCache[rowKey];
 
-                  return [
+                  return (
+                  <Fragment key={rec.id}>
                     <TableRow
-                      key={rec.id}
                       className={cn("hover:bg-muted/30 transition-colors", isExpanded && "bg-muted/20")}
                     >
                       {/* Работник */}
@@ -346,11 +346,11 @@ export default function AttendancePage() {
                           ● Присъства
                         </Badge>
                       </TableCell>
-                    </TableRow>,
+                    </TableRow>
 
-                    /* ── Expandable sessions sub-row ── */
-                    isExpanded && (
-                      <TableRow key={`${rec.id}-sessions`} className="bg-indigo-50/60 hover:bg-indigo-50/60">
+                    {/* ── Expandable sessions sub-row ── */}
+                    {isExpanded && (
+                      <TableRow className="bg-indigo-50/60 hover:bg-indigo-50/60">
                         <TableCell colSpan={10} className="py-3 px-6">
                           {sessionsData === "loading" ? (
                             <p className="text-xs text-muted-foreground font-mono animate-pulse">Зареждане на сесии...</p>
@@ -405,8 +405,9 @@ export default function AttendancePage() {
                           )}
                         </TableCell>
                       </TableRow>
-                    ),
-                  ].filter(Boolean);
+                    )}
+                  </Fragment>
+                  );
                 })
               )}
             </TableBody>
