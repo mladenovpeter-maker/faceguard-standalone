@@ -347,6 +347,43 @@ paths:
               schema:
                 $ref: "#/components/schemas/CameraTestResult"
 
+  /cameras/{cameraId}/face-event:
+    post:
+      operationId: cameraFaceEvent
+      tags: [cameras]
+      summary: Receive a face-detection push event from a camera (UNV/Dahua/HikVision)
+      description: |
+        No session auth required — camera posts directly from the LAN.
+        Optionally protect with `?token=<FACE_PUSH_TOKEN>` env var.
+        Accepted formats: multipart/form-data (image file), application/octet-stream (raw JPEG), application/json ({ imageBase64 }).
+      parameters:
+        - name: cameraId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FacePushEvent"
+      responses:
+        "200":
+          description: Face(s) detected and matched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FacePushResult"
+        "204":
+          description: No face detected or all suppressed by cooldown
+        "400":
+          description: No image data or invalid camera ID
+        "401":
+          description: Invalid token
+        "404":
+          description: Camera not found
+
   # ZONES
   /zones:
     get:
@@ -2136,3 +2173,22 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Form76Row"
+
+    FacePushEvent:
+      type: object
+      description: Optional JSON body for face-push endpoint. Cameras may also POST multipart/form-data or application/octet-stream.
+      properties:
+        imageBase64:
+          type: string
+          description: Base64-encoded JPEG face crop (data URI or raw base64).
+
+    FacePushResult:
+      type: object
+      required: [detected, matched]
+      properties:
+        detected:
+          type: integer
+          description: Number of faces detected in the submitted image.
+        matched:
+          type: integer
+          description: Number of faces matched to enrolled employees.
