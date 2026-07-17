@@ -73,17 +73,22 @@ router.post("/leaves", async (req, res): Promise<void> => {
     return;
   }
 
+  const insertValues: typeof leavesTable.$inferInsert = {
+    employeeId: body.data.employeeId,
+    type: body.data.type ?? "paid_leave",
+    startDate: body.data.startDate instanceof Date
+      ? body.data.startDate.toISOString().slice(0, 10)
+      : body.data.startDate,
+    endDate: body.data.endDate instanceof Date
+      ? body.data.endDate.toISOString().slice(0, 10)
+      : body.data.endDate,
+    reason: body.data.reason ?? null,
+    status: body.data.status ?? "approved",
+    notes: body.data.notes ?? null,
+  };
   const [inserted] = await db
     .insert(leavesTable)
-    .values({
-      employeeId: body.data.employeeId,
-      type: body.data.type ?? "paid_leave",
-      startDate: body.data.startDate,
-      endDate: body.data.endDate,
-      reason: body.data.reason ?? null,
-      status: body.data.status ?? "approved",
-      notes: body.data.notes ?? null,
-    })
+    .values(insertValues)
     .returning({ id: leavesTable.id });
 
   const records = await selectLeaveWithJoins(eq(leavesTable.id, inserted.id));
