@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { eq, desc, and, gte, lte, sql, isNotNull } from "drizzle-orm";
 import { db, recognitionEventsTable, camerasTable, zonesTable, employeesTable, employeePhotosTable, attendanceTable } from "@workspace/db";
 import {
@@ -10,6 +10,7 @@ import {
 import { computeAllFaceDescriptorsAsync } from "../lib/face-recognition-pool";
 import { matchDescriptor, type FaceCandidate } from "../lib/face-recognition";
 import { saveSnapshot, SNAPSHOTS_DIR } from "../lib/snapshot-store";
+import multer from "multer";
 
 const router: IRouter = Router();
 
@@ -380,5 +381,169 @@ router.post("/recognitions", async (req, res): Promise<void> => {
     employeePhotoUrl: emp?.photoUrl ?? null,
   }));
 });
+
+// ── UNV / Dahua / generic camera face-push endpoint ─────────────────────────
+// Cameras configured with HTTP upload for face detection events POST a face
+// crop here. Accepts:
+//   1. multipart/form-data  — image in any file field (UNV, Dahua, HikVision)
+//   2. application/octet-stream — raw JPEG bytes in the body
+//   3. application/json — { "imageBase64": "data:image/jpeg;base64,..." }
+//
+// No session auth required (camera is on the local LAN). The camera ID in the
+// URL is validated against the database — unknown IDs are rejected with 404.
+//
+// Configure on camera:
+//   HTTP Upload URL: http://<server>:8080/api/cameras/<id>/face-event
+//   (Optional) add ?token=<FACE_PUSH_TOKEN> and set that env var to add a
+//   simple shared-secret check without full session auth.
+
+const FACE_PUSH_TOKEN = process.env.FACE_PUSH_TOKEN ?? "";
+
+// multer: store uploaded files in memory (face crops are small — typically <50 KB)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const uploadAny = upload.any() as (req: Request, res: Response, next: NextFunction) => void;
+
+router.post(
+  "/cameras/:cameraId/face-event",
+  (req: Request, res: Response, next: NextFunction) => {
+    // Optional token check
+    if (FACE_PUSH_TOKEN && req.query["token"] !== FACE_PUSH_TOKEN) {
+      res.status(401).json({ error: "Invalid token" });
+      return;
+    }
+
+    const ct = req.headers["content-type"] ?? "";
+    if (ct.includes("multipart/form-data")) {
+      uploadAny(req, res, next);
+    } else {
+      next();
+    }
+  },
+  async (req: Request, res: Response): Promise<void> => {
+    const cameraId = Number(req.params["cameraId"]);
+    if (!Number.isInteger(cameraId)) {
+      res.status(400).json({ error: "Invalid cameraId" });
+      return;
+    }
+
+    // Validate camera exists and fetch its zone
+    const [cam] = await db
+      .select({ id: camerasTable.id, zoneId: camerasTable.zoneId, zoneType: zonesTable.zoneType })
+      .from(camerasTable)
+      .leftJoin(zonesTable, eq(zonesTable.id, camerasTable.zoneId))
+      .where(eq(camerasTable.id, cameraId));
+
+    if (!cam) {
+      res.status(404).json({ error: "Camera not found" });
+      return;
+    }
+
+    // ── Extract image buffer from whichever format the camera used ─────────
+    let imageBuffer: Buffer | null = null;
+
+    const ct = req.headers["content-type"] ?? "";
+
+    if (ct.includes("multipart/form-data")) {
+      // multer already parsed — grab first file field (field name varies by vendor)
+      const files = (req as Request & { files?: Express.Multer.File[] }).files ?? [];
+      if (files.length > 0) {
+        imageBuffer = files[0]!.buffer;
+      }
+    } else if (ct.includes("octet-stream")) {
+      // Raw binary body — express gives us the raw buffer when no body-parser ran
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(chunk as Buffer);
+      imageBuffer = Buffer.concat(chunks);
+    } else {
+      // JSON with base64 image
+      const body = req.body as Record<string, unknown>;
+      const b64 = (body["imageBase64"] ?? body["image"] ?? body["snapshot"]) as string | undefined;
+      if (b64) {
+        imageBuffer = Buffer.from(b64.replace(/^data:image\/\w+;base64,/, ""), "base64");
+      }
+    }
+
+    if (!imageBuffer || imageBuffer.length === 0) {
+      res.status(400).json({ error: "No image data received" });
+      return;
+    }
+
+    // ── Run InsightFace matching (same pipeline as polling worker) ──────────
+    try {
+      const descriptors = await computeAllFaceDescriptorsAsync(imageBuffer);
+
+      if (descriptors.length === 0) {
+        res.status(204).end();
+        return;
+      }
+
+      const photos = await db
+        .select({ employeeId: employeePhotosTable.employeeId, faceDescriptor: employeePhotosTable.faceDescriptor })
+        .from(employeePhotosTable)
+        .where(isNotNull(employeePhotosTable.faceDescriptor));
+
+      const candidates: FaceCandidate[] = photos
+        .filter((p) => p.faceDescriptor)
+        .map((p) => ({ employeeId: p.employeeId, descriptor: p.faceDescriptor as number[] }));
+
+      const detectedAt = new Date();
+      const snapshotUrl = await saveSnapshot(
+        `data:image/jpeg;base64,${imageBuffer.toString("base64")}`,
+        detectedAt,
+      ).catch(() => null);
+
+      const camZoneId   = cam.zoneId   ?? null;
+      const camZoneType = cam.zoneType ?? null;
+
+      const results = await Promise.all(
+        descriptors.map(async (descriptor) => {
+          const match = matchDescriptor(descriptor, candidates);
+
+          if (match) {
+            await upsertAttendance(match.employeeId, camZoneId, camZoneType, detectedAt).catch((e) =>
+              req.log.warn({ err: e, employeeId: match.employeeId }, "Attendance upsert failed (face-event)"),
+            );
+            if (recognizedCoolingDown(cameraId, match.employeeId)) return null;
+            markRecognized(cameraId, match.employeeId);
+          } else {
+            if (unknownCoolingDown(cameraId)) return null;
+            markUnknown(cameraId);
+          }
+
+          const [evt] = await db.insert(recognitionEventsTable).values({
+            cameraId,
+            employeeId: match ? match.employeeId : null,
+            status: match ? "recognized" : "unknown",
+            confidence: match ? match.confidence / 100 : 0,
+            snapshotUrl,
+            detectedAt,
+          }).returning();
+
+          req.log.info(
+            match
+              ? { employeeId: match.employeeId, cameraId, source: "face-push" }
+              : { cameraId, source: "face-push" },
+            match ? "Face-push: matched employee" : "Face-push: unknown face",
+          );
+          return evt;
+        }),
+      );
+
+      const matched = results.filter(Boolean);
+      req.log.info({ cameraId, detected: descriptors.length, matched: matched.length }, "Face-push frame processed");
+
+      res.status(matched.length > 0 ? 200 : 204).json({
+        detected: descriptors.length,
+        matched: matched.length,
+      });
+    } catch (err) {
+      req.log.error({ err, cameraId }, "Face-push processing failed");
+      res.status(500).json({ error: "Internal processing error" });
+    }
+  },
+);
+// ────────────────────────────────────────────────────────────────────────────
 
 export default router;
