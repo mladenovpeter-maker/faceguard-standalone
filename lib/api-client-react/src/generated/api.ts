@@ -38,6 +38,8 @@ import type {
   EmployeePhoto,
   EmployeePresence,
   EmployeeUpdate,
+  FacePushEvent,
+  FacePushResult,
   Form76Response,
   GetAttendanceForm76Params,
   GetAttendanceReportParams,
@@ -1267,6 +1269,80 @@ export const useTestCameraConnection = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getTestCameraConnectionMutationOptions(options));
+    }
+
+export const getCameraFaceEventUrl = (cameraId: number,) => {
+
+
+
+
+  return `/api/cameras/${cameraId}/face-event`
+}
+
+/**
+ * No session auth required — camera posts directly from the LAN.
+ * Optionally protect with `?token=<FACE_PUSH_TOKEN>` env var.
+ * Accepted formats: multipart/form-data (image file), application/octet-stream (raw JPEG), application/json ({ imageBase64 }).
+ * @summary Receive a face-detection push event from a camera (UNV/Dahua/HikVision)
+ */
+export const cameraFaceEvent = async (cameraId: number,
+    facePushEvent?: FacePushEvent, options?: RequestInit): Promise<FacePushResult | void> => {
+
+  return customFetch<FacePushResult | void>(getCameraFaceEventUrl(cameraId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(facePushEvent)
+  }
+);}
+
+
+
+
+export const getCameraFaceEventMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cameraFaceEvent>>, TError,{cameraId: number;data?: BodyType<FacePushEvent>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cameraFaceEvent>>, TError,{cameraId: number;data?: BodyType<FacePushEvent>}, TContext> => {
+
+const mutationKey = ['cameraFaceEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cameraFaceEvent>>, {cameraId: number;data?: BodyType<FacePushEvent>}> = (props) => {
+          const {cameraId,data} = props ?? {};
+
+          return  cameraFaceEvent(cameraId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CameraFaceEventMutationResult = NonNullable<Awaited<ReturnType<typeof cameraFaceEvent>>>
+    export type CameraFaceEventMutationBody = BodyType<FacePushEvent> | undefined
+    export type CameraFaceEventMutationError = ErrorType<void>
+
+    /**
+ * @summary Receive a face-detection push event from a camera (UNV/Dahua/HikVision)
+ */
+export const useCameraFaceEvent = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cameraFaceEvent>>, TError,{cameraId: number;data?: BodyType<FacePushEvent>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cameraFaceEvent>>,
+        TError,
+        {cameraId: number;data?: BodyType<FacePushEvent>},
+        TContext
+      > => {
+      return useMutation(getCameraFaceEventMutationOptions(options));
     }
 
 export const getListZonesUrl = () => {
