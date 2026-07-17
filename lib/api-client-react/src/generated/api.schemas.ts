@@ -880,6 +880,21 @@ export interface Form76Response {
   rows: Form76Row[];
 }
 
+/**
+ * Optional JSON body for face-push endpoint. Cameras may also POST multipart/form-data or application/octet-stream.
+ */
+export interface FacePushEvent {
+  /** Base64-encoded JPEG face crop (data URI or raw base64). */
+  imageBase64?: string;
+}
+
+export interface FacePushResult {
+  /** Number of faces detected in the submitted image. */
+  detected: number;
+  /** Number of faces matched to enrolled employees. */
+  matched: number;
+}
+
 export type ListEmployeesParams = {
 search?: string;
 /**
