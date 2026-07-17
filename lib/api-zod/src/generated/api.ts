@@ -365,6 +365,26 @@ export const TestCameraConnectionResponse = zod.object({
 
 
 /**
+ * No session auth required — camera posts directly from the LAN.
+ * Optionally protect with `?token=<FACE_PUSH_TOKEN>` env var.
+ * Accepted formats: multipart/form-data (image file), application/octet-stream (raw JPEG), application/json ({ imageBase64 }).
+ * @summary Receive a face-detection push event from a camera (UNV/Dahua/HikVision)
+ */
+export const CameraFaceEventParams = zod.object({
+  "cameraId": zod.coerce.number()
+})
+
+export const CameraFaceEventBody = zod.object({
+  "imageBase64": zod.string().optional().describe('Base64-encoded JPEG face crop (data URI or raw base64).')
+}).describe('Optional JSON body for face-push endpoint. Cameras may also POST multipart\/form-data or application\/octet-stream.')
+
+export const CameraFaceEventResponse = zod.object({
+  "detected": zod.number().describe('Number of faces detected in the submitted image.'),
+  "matched": zod.number().describe('Number of faces matched to enrolled employees.')
+})
+
+
+/**
  * @summary List all zones/rooms
  */
 export const ListZonesResponseItem = zod.object({
