@@ -299,6 +299,8 @@ router.get("/attendance", async (req, res): Promise<void> => {
       date:             attendanceTable.date,
       firstSeen:        attendanceTable.firstSeen,
       lastSeen:         attendanceTable.lastSeen,
+      clockInAt:        attendanceTable.clockInAt,
+      clockOutAt:       attendanceTable.clockOutAt,
       zoneId:           attendanceTable.zoneId,
       zoneName:         zonesTable.name,
       totalMinutes:     attendanceTable.totalMinutes,
@@ -327,8 +329,9 @@ router.get("/attendance", async (req, res): Promise<void> => {
   const sessionsMap = await fetchSessionStats(empIds, minDate, maxDate);
 
   const result = records.map((r) => {
+    // Use real clock-in/out for schedule accuracy; fall back to firstSeen/lastSeen only when missing
     const si = computeScheduleInfo(
-      r.firstSeen, r.lastSeen,
+      r.clockInAt ?? r.firstSeen, r.clockOutAt ?? r.lastSeen,
       r.scheduleStartTime ?? null, r.scheduleEndTime ?? null,
     );
     const dateStr = typeof r.date === "string" ? r.date : (r.date as Date).toISOString().slice(0, 10);
@@ -364,6 +367,8 @@ router.get("/attendance/today", async (_req, res): Promise<void> => {
       date: attendanceTable.date,
       firstSeen: attendanceTable.firstSeen,
       lastSeen: attendanceTable.lastSeen,
+      clockInAt:  attendanceTable.clockInAt,
+      clockOutAt: attendanceTable.clockOutAt,
       zoneId: attendanceTable.zoneId,
       zoneName: zonesTable.name,
       totalMinutes: attendanceTable.totalMinutes,
@@ -458,7 +463,7 @@ router.get("/attendance/today", async (_req, res): Promise<void> => {
   const absentCount = Math.max(0, totalEmployees - presentCount);
 
   const recordsWithSchedule = records.map((r) => {
-    const si = computeScheduleInfo(r.firstSeen, r.lastSeen, r.scheduleStartTime ?? null, r.scheduleEndTime ?? null);
+    const si = computeScheduleInfo(r.clockInAt ?? r.firstSeen, r.clockOutAt ?? r.lastSeen, r.scheduleStartTime ?? null, r.scheduleEndTime ?? null);
     return { ...r, ...si };
   });
 
